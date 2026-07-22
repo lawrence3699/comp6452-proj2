@@ -1,0 +1,22 @@
+COMP6452 26T2 Project 2 Task 3 — deployed chaincode
+
+Hyperledger Fabric identifies deployed chaincode by a package ID, which is a
+deterministic hash of the chaincode package, together with the channel it is
+committed to. There is no account address as there would be on an
+account-based ledger such as Ethereum.
+
+Platform : Hyperledger Fabric 2.5
+Network  : <test-network, organisations>
+Channel  : mychannel
+
+Chaincode: batch-registry
+  Package ID          : <fill in from: peer lifecycle chaincode queryinstalled>
+  Sequence            : 1
+  Endorsement policy  : <fill in>
+
+Chaincode: coldchain-compliance
+  Package ID          : <fill in>
+  Sequence            : 1
+  Endorsement policy  : <fill in>
+
+Private data collection: <name, member orgs>
