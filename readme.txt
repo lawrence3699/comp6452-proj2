@@ -147,7 +147,10 @@ TEAM
    registration by a producer, rejection of a non-producer, custody transfer,
    rejection of a non-holder, rejection of a non-oracle reading, three
    consecutive breaches, the automatic cross-chaincode flag, and the
-   regulator's read of the complete ordered history. 13 assertions.
+   regulator's read of the complete ordered history, plus the private data
+   collection (written via the transient map, absent from the public ledger,
+   readable by a collection member, and its on-chain hash matching a locally
+   computed SHA-256 of the payload). 17 assertions.
 
 
 8. REQUIREMENTS COVERAGE

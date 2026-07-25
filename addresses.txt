@@ -43,8 +43,8 @@ Private data collection
 NOTE ON PACKAGE IDS
   The package ID is a SHA-256 over the chaincode package, so it changes
   whenever the package contents change. The ids above are those of the
-  deployment verified end to end on 2026-07-25 from a clean
-  network bring-up (network.sh down, up, identities, deployCC.sh). Re-running network/deployCC.sh
+  deployment verified end to end on 2026-07-25, from a clean network bring-up
+  (network.sh down, then up, identities and deployCC.sh). Re-running the deploy
   on another machine produces different ids; read the current values with
 
     peer lifecycle chaincode queryinstalled

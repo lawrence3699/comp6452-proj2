@@ -2,7 +2,12 @@ import { Context, Contract } from 'fabric-contract-api';
 import { Batch, BatchStatus, withHolder, withStatus } from './batch';
 import { Role, assertRole, callerMsp, hasRole } from './access';
 import { assertTransition } from './stateMachine';
-import { putPrivateDetails, readTransientDetails } from './privateData';
+import {
+  getPrivateDetails,
+  getPrivateDetailsHash,
+  putPrivateDetails,
+  readTransientDetails,
+} from './privateData';
 
 /** Composite key indexing batches by their current holder, for queries.ts. */
 export const HOLDER_INDEX = 'holder~batchId';
@@ -283,5 +288,28 @@ export class BatchRegistryContract extends Contract {
   public async BatchExists(ctx: Context, batchId: string): Promise<boolean> {
     const raw = await ctx.stub.getState(batchId);
     return raw !== undefined && raw !== null && raw.length > 0;
+  }
+
+  /**
+   * Read the commercially sensitive fields.
+   *
+   * Only succeeds on a peer whose organisation is in the collection policy;
+   * everyone else gets an error rather than the data, which is the whole point
+   * of keeping these fields off the public ledger.
+   */
+  public async GetPrivateDetails(ctx: Context, batchId: string): Promise<string> {
+    const details = await getPrivateDetails(ctx, batchId);
+    return JSON.stringify(details);
+  }
+
+  /**
+   * Read the private-data hash from the public ledger.
+   *
+   * Readable by any peer, including organisations outside the collection, so an
+   * auditor can prove the private payload has not changed since commit without
+   * ever seeing its contents.
+   */
+  public async GetPrivateDetailsHash(ctx: Context, batchId: string): Promise<string> {
+    return getPrivateDetailsHash(ctx, batchId);
   }
 }

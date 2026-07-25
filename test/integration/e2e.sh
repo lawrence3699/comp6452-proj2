@@ -54,6 +54,43 @@ setUser transporter1
 expectFail "a transporter cannot register a batch" "access denied" \
   ccInvoke batch-registry "{\"function\":\"BatchRegistryContract:RegisterBatch\",\"Args\":[\"{\\\"batchId\\\":\\\"${BATCH}-X\\\",\\\"foodType\\\":\\\"chilled\\\",\\\"producedAt\\\":1700000000,\\\"shelfLifeDays\\\":7,\\\"quantity\\\":10}\"]}"
 
+step "1b. private data collection"
+setUser producer1
+PRIV_BATCH="${BATCH}-PRIV"
+# Sensitive fields travel in the transient map, never as a normal argument: a
+# normal argument is recorded in the proposal and lands on the public ledger.
+TRANSIENT=$(printf '{"unitPrice":42.5,"inspectionNotes":"grade A"}' | base64)
+peer chaincode invoke -o localhost:7050 --ordererTLSHostnameOverride orderer.example.com \
+  --tls --cafile "$ORDERER_CA" -C "$CHANNEL" -n batch-registry \
+  -c "{\"function\":\"BatchRegistryContract:RegisterBatch\",\"Args\":[\"{\\\"batchId\\\":\\\"${PRIV_BATCH}\\\",\\\"foodType\\\":\\\"chilled\\\",\\\"producedAt\\\":1700000000,\\\"shelfLifeDays\\\":9,\\\"origin\\\":\\\"Priv\\\",\\\"quantity\\\":20}\"]}" \
+  --transient "{\"batch_private_details\":\"${TRANSIENT}\"}" \
+  --peerAddresses localhost:7051 --tlsRootCertFiles "$ORG1_CA" \
+  --peerAddresses localhost:9051 --tlsRootCertFiles "$ORG2_CA" >/dev/null 2>&1 \
+  && ok "batch registered with private details" \
+  || bad "registration with private details failed"
+sleep 3
+
+public=$(ccQuery batch-registry "{\"function\":\"BatchRegistryContract:GetBatch\",\"Args\":[\"${PRIV_BATCH}\"]}" 2>/dev/null)
+echo "$public" | grep -q "unitPrice" \
+  && bad "unitPrice leaked onto the public ledger" \
+  || ok "unitPrice is absent from the public ledger"
+
+private=$(ccQuery batch-registry "{\"function\":\"BatchRegistryContract:GetPrivateDetails\",\"Args\":[\"${PRIV_BATCH}\"]}" 2>/dev/null)
+echo "$private" | grep -q '"unitPrice":42.5' \
+  && ok "a collection member can read the private details" \
+  || bad "private details unreadable by a collection member: $private"
+
+# The hash is public even to organisations outside the collection, which is how
+# an auditor proves the payload has not changed without ever seeing it.
+hash=$(ccQuery batch-registry "{\"function\":\"BatchRegistryContract:GetPrivateDetailsHash\",\"Args\":[\"${PRIV_BATCH}\"]}" 2>/dev/null)
+expected=$(python3 -c "
+import hashlib, json
+d = {'batchId': '${PRIV_BATCH}', 'unitPrice': 42.5, 'inspectionNotes': 'grade A'}
+print(hashlib.sha256(json.dumps(d, separators=(',', ':')).encode()).hexdigest())")
+[ "$hash" = "$expected" ] \
+  && ok "the on-chain hash matches the private payload" \
+  || bad "hash mismatch: chain=$hash expected=$expected"
+
 step "2. custody transfer"
 setUser producer1
 expectOk "holder can transfer custody" \
