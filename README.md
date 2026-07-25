@@ -29,14 +29,38 @@ docs/interfaces.md                 interfaces frozen on day 1
 
 Start from `docs/interfaces.md` — every workstream depends on those shapes.
 
-## Running the unit tests
-
-Chaincode unit tests use a mocked chaincode stub, so no Fabric network is
-required:
+## Quick start
 
 ```bash
-cd chaincode/batch-registry && npm install && npm test
-cd chaincode/coldchain-compliance && npm install && npm test
+cd network
+./network.sh up          # test-network + CAs + mychannel
+./network.sh identities  # producer1, transporter1, warehouse1, regulator1, oracle1
+./deployCC.sh            # build, package, install, approve, commit both chaincodes
+```
+
+Both chaincodes deploy as Chaincode-as-a-Service, because the peer's built-in
+Docker builder no longer works against Docker 29. `readme.txt` section 4 has
+the details.
+
+## Running the tests
+
+Unit tests need no network — the chaincode tests run against a stubbed
+`ChaincodeStub`:
+
+```bash
+cd chaincode/batch-registry        && npm install && npm test   # 12
+cd chaincode/coldchain-compliance  && npm install && npm test   # 10
+cd offchain/shared                 && npm install && npm test   # 20
+cd offchain/storage                && npm install && npm test   # 16
+cd offchain/oracle-service         && npm install && npm test   # 51
+cd offchain/indexer                && npm install && npm test   # 57
+```
+
+The end-to-end suite runs against a live network and covers the full required
+path, the access-control rejections and the private data collection:
+
+```bash
+test/integration/e2e.sh   # 17 assertions
 ```
 
 ## Submission
