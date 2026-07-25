@@ -13,7 +13,18 @@ CHANNEL="${CHANNEL:-mychannel}"
 
 # Absolute path to this repository, resolved from this script's own location so
 # the scripts work regardless of the directory they are invoked from.
-REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+#
+# BASH_SOURCE is unset when this file is sourced from zsh, which is the default
+# shell on macOS. Fall back to zsh's own %N expansion, then to $0, so `source
+# network/env.sh` works from an interactive zsh prompt as well as from bash.
+if [ -n "${BASH_SOURCE:-}" ]; then
+  _env_self="${BASH_SOURCE[0]}"
+elif [ -n "${ZSH_VERSION:-}" ]; then
+  _env_self="${(%):-%N}"
+else
+  _env_self="$0"
+fi
+REPO_ROOT="$(cd "$(dirname "$_env_self")/.." && pwd)"
 
 if [ ! -d "$TEST_NETWORK" ]; then
   echo "error: test-network not found at $TEST_NETWORK" >&2

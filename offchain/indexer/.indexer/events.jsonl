@@ -1,0 +1,2 @@
+{"seq":0,"event":{"eventName":"BatchRegistered","batchId":"IDX-1784950043","producer":"Org1MSP","timestamp":1784950043,"blockNumber":56,"transactionId":"30fc9bf0a6ce396159ef7b4eb148f1cb93f496d502a0d2b16fe32f70f50b8d85","chaincodeName":"batch-registry"}}
+{"seq":1,"event":{"eventName":"CustodyTransferred","batchId":"IDX-1784950043","from":"Org1MSP","to":"Org2MSP","timestamp":1784950047,"blockNumber":57,"transactionId":"d308500431359d4c6e0343ac1f6b4f69f6fb6dbda6fe7f568c398ede48279fa7","chaincodeName":"batch-registry"}}
