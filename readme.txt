@@ -130,13 +130,14 @@ TEAM
    ChaincodeStub:
 
        cd chaincode/batch-registry        && npm install && npm test    # 12
-       cd chaincode/coldchain-compliance  && npm install && npm test    # 10
+       cd chaincode/coldchain-compliance  && npm install && npm test    # 12
        cd offchain/shared                 && npm install && npm test    # 20
        cd offchain/storage                && npm install && npm test    # 16
        cd offchain/oracle-service         && npm install && npm test    # 51
        cd offchain/indexer                && npm install && npm test    # 57
+       cd application                     && npm install && npm test    # 79
 
-                                                             total      166
+                                                             total      247
 
    End-to-end test. Needs the network up, identities registered and both
    chaincodes deployed (sections 3 and 4):
@@ -150,7 +151,8 @@ TEAM
    regulator's read of the complete ordered history, plus the private data
    collection (written via the transient map, absent from the public ledger,
    readable by a collection member, and its on-chain hash matching a locally
-   computed SHA-256 of the payload). 17 assertions.
+   computed SHA-256 of the payload) and the recall cascade through the
+   derivation graph, two levels deep. 20 assertions.
 
 
 8. REQUIREMENTS COVERAGE

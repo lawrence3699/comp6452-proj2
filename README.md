@@ -49,18 +49,19 @@ Unit tests need no network — the chaincode tests run against a stubbed
 
 ```bash
 cd chaincode/batch-registry        && npm install && npm test   # 12
-cd chaincode/coldchain-compliance  && npm install && npm test   # 10
+cd chaincode/coldchain-compliance  && npm install && npm test   # 12
 cd offchain/shared                 && npm install && npm test   # 20
 cd offchain/storage                && npm install && npm test   # 16
 cd offchain/oracle-service         && npm install && npm test   # 51
 cd offchain/indexer                && npm install && npm test   # 57
+cd application                     && npm install && npm test   # 79
 ```
 
 The end-to-end suite runs against a live network and covers the full required
 path, the access-control rejections and the private data collection:
 
 ```bash
-test/integration/e2e.sh   # 17 assertions
+test/integration/e2e.sh   # 20 assertions
 ```
 
 ## Submission
