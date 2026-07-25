@@ -3,7 +3,6 @@ import chaiAsPromised from 'chai-as-promised';
 import { Context } from 'fabric-contract-api';
 import { isBreach, rangeFor, DEFAULT_RANGE } from '../src/thresholds';
 import { ComplianceContract } from '../src/compliance';
-import { DERIVED_INDEX } from '../src/recall';
 
 chai.use(chaiAsPromised);
 const { expect } = chai;
@@ -32,7 +31,11 @@ interface InvokeCall {
  * Stubbed context that also records cross-chaincode calls, which is how the
  * flagging and cascade tests observe behaviour without a live network.
  */
-const makeContext = (batches: Record<string, { foodType: string; status: string }>) => {
+const makeContext = (
+  batches: Record<string, { foodType: string; status: string }>,
+  /** Parent -> children, standing in for batch-registry's derivedFrom index. */
+  derived: Record<string, string[]> = {},
+) => {
   const state = new Map<string, Buffer>();
   const invokes: InvokeCall[] = [];
   const events: { name: string; payload: unknown }[] = [];
@@ -51,6 +54,11 @@ const makeContext = (batches: Record<string, { foodType: string; status: string 
       const parts = key.split(' ').filter((p) => p.length > 0);
       return { objectType: parts[0], attributes: parts.slice(1) };
     },
+    // Only ever sees `state`, which models THIS chaincode's namespace. Data
+    // owned by batch-registry is reachable solely through invokeChaincode
+    // below, never from here — an earlier stub that ignored namespace
+    // isolation let a broken cascade pass its unit test while silently doing
+    // nothing on a real peer.
     getStateByPartialCompositeKey: async (objectType: string, attributes: string[]) => {
       const prefix = ` ${objectType} ${attributes.join(' ')} `;
       const matches: { key: string; value: Buffer }[] = [];
@@ -87,6 +95,15 @@ const makeContext = (batches: Record<string, { foodType: string; status: string 
         };
       }
 
+      // Served by batch-registry because the index lives in its namespace.
+      if (fn === 'BatchQueryContract:GetDerivedBatches') {
+        return {
+          status: 200,
+          message: '',
+          payload: Buffer.from(JSON.stringify(derived[args[1]] ?? [])),
+        };
+      }
+
       if (fn === 'BatchRegistryContract:FlagBatch') {
         batches[args[1]].status = 'FLAGGED';
       }
@@ -105,6 +122,7 @@ const makeContext = (batches: Record<string, { foodType: string; status: string 
   return {
     ctx,
     state,
+    batches,
     invokes,
     events,
     compositeKey,
@@ -191,17 +209,18 @@ describe('ComplianceContract', () => {
   });
 
   it('cascades a recall to downstream batches', async () => {
-    const t = makeContext({
-      ROOT: { foodType: 'chilled', status: 'FLAGGED' },
-      CHILD1: { foodType: 'chilled', status: 'AT_WAREHOUSE' },
-      CHILD2: { foodType: 'chilled', status: 'AT_WAREHOUSE' },
-      GRANDCHILD: { foodType: 'chilled', status: 'AT_WAREHOUSE' },
-    });
-
-    // ROOT -> CHILD1, CHILD2 ; CHILD1 -> GRANDCHILD
-    t.state.set(t.compositeKey(DERIVED_INDEX, ['ROOT', 'CHILD1']), Buffer.from(' '));
-    t.state.set(t.compositeKey(DERIVED_INDEX, ['ROOT', 'CHILD2']), Buffer.from(' '));
-    t.state.set(t.compositeKey(DERIVED_INDEX, ['CHILD1', 'GRANDCHILD']), Buffer.from(' '));
+    // The derivation index belongs to batch-registry's namespace, so it is
+    // supplied here as registry data reachable only through invokeChaincode —
+    // not written into this chaincode's own state.
+    const t = makeContext(
+      {
+        ROOT: { foodType: 'chilled', status: 'FLAGGED' },
+        CHILD1: { foodType: 'chilled', status: 'AT_WAREHOUSE' },
+        CHILD2: { foodType: 'chilled', status: 'AT_WAREHOUSE' },
+        GRANDCHILD: { foodType: 'chilled', status: 'AT_WAREHOUSE' },
+      },
+      { ROOT: ['CHILD1', 'CHILD2'], CHILD1: ['GRANDCHILD'] },
+    );
 
     t.setCaller({ role: 'regulator' });
     const recalled = JSON.parse(await cc.RecallBatch(t.ctx, 'ROOT')) as string[];
@@ -209,11 +228,51 @@ describe('ComplianceContract', () => {
     // The whole derivation graph must be recalled, not just the first level.
     expect(recalled).to.have.members(['ROOT', 'CHILD1', 'CHILD2', 'GRANDCHILD']);
     expect(recalled[0]).to.equal('ROOT');
+    expect(t.batches.GRANDCHILD.status).to.equal('RECALLED');
 
     const recallCalls = t.invokes.filter(
       (i) => i.args[0] === 'BatchRegistryContract:RecallBatch',
     );
     expect(recallCalls).to.have.length(4);
+  });
+
+  it('reads the derivation index through batch-registry, not its own state', async () => {
+    // Regression guard for a real bug: cascadeRecall used to scan
+    // derivedFrom~batchId with its own getStateByPartialCompositeKey, which
+    // searches this chaincode's namespace and silently found nothing, so a
+    // recall only ever affected the batch it was called on.
+    const t = makeContext(
+      {
+        ROOT: { foodType: 'chilled', status: 'FLAGGED' },
+        CHILD: { foodType: 'chilled', status: 'FLAGGED' },
+      },
+      { ROOT: ['CHILD'] },
+    );
+
+    t.setCaller({ role: 'regulator' });
+    await cc.RecallBatch(t.ctx, 'ROOT');
+
+    const lookups = t.invokes.filter(
+      (i) => i.args[0] === 'BatchQueryContract:GetDerivedBatches',
+    );
+    expect(lookups.length).to.be.greaterThan(0);
+    expect(lookups[0].chaincode).to.equal('batch-registry');
+    expect(t.batches.CHILD.status).to.equal('RECALLED');
+  });
+
+  it('does not loop forever when the derivation graph contains a cycle', async () => {
+    const t = makeContext(
+      {
+        A: { foodType: 'chilled', status: 'FLAGGED' },
+        B: { foodType: 'chilled', status: 'FLAGGED' },
+      },
+      { A: ['B'], B: ['A'] },
+    );
+
+    t.setCaller({ role: 'regulator' });
+    const recalled = JSON.parse(await cc.RecallBatch(t.ctx, 'A')) as string[];
+
+    expect(recalled).to.have.members(['A', 'B']);
   });
 
   it('rejects a recall from a non-regulator', async () => {

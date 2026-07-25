@@ -1,0 +1,38 @@
+{
+  "name": "@comp6452/application",
+  "version": "1.0.0",
+  "description": "Role-specific Fabric Gateway clients: producer, transporter, regulator",
+  "main": "src/index.ts",
+  "types": "src/index.ts",
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "build": "tsc",
+    "typecheck": "tsc --noEmit",
+    "test": "mocha",
+    "cli": "ts-node src/run.ts",
+    "producer": "ts-node src/run.ts producer",
+    "transporter": "ts-node src/run.ts transporter",
+    "regulator": "ts-node src/run.ts regulator",
+    "demo": "./demo.sh"
+  },
+  "dependencies": {
+    "@comp6452/offchain-shared": "file:../offchain/shared",
+    "@comp6452/offchain-storage": "file:../offchain/storage",
+    "@hyperledger/fabric-gateway": "^1.7.0"
+  },
+  "devDependencies": {
+    "@types/chai": "^4.3.11",
+    "@types/mocha": "^10.0.6",
+    "@types/node": "^18.19.0",
+    "@types/sinon": "^17.0.2",
+    "@types/sinon-chai": "^3.2.12",
+    "chai": "^4.4.1",
+    "mocha": "^10.2.0",
+    "sinon": "^17.0.1",
+    "sinon-chai": "^3.7.0",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.3.3"
+  }
+}

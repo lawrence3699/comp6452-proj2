@@ -7,6 +7,38 @@ import { Context } from 'fabric-contract-api';
  */
 export const DERIVED_INDEX = 'derivedFrom~batchId';
 
+export const REGISTRY_CHAINCODE = 'batch-registry';
+export const CHANNEL = 'mychannel';
+
+/**
+ * Read the children of one batch out of batch-registry.
+ *
+ * Chaincode state is namespaced per chaincode, so the derivedFrom~batchId index
+ * that batch-registry writes is invisible to a getStateByPartialCompositeKey
+ * issued from here — that call searches this chaincode's own namespace and
+ * always returns empty, which silently reduced the cascade to the named batch
+ * alone. Crossing the namespace boundary requires invokeChaincode.
+ */
+const childrenOf = async (ctx: Context, batchId: string): Promise<string[]> => {
+  const response = await ctx.stub.invokeChaincode(
+    REGISTRY_CHAINCODE,
+    ['BatchQueryContract:GetDerivedBatches', batchId],
+    CHANNEL,
+  );
+
+  if (response.status !== 200) {
+    throw new Error(
+      `could not read the batches derived from ${batchId}: ${response.message}`,
+    );
+  }
+
+  if (!response.payload || response.payload.length === 0) {
+    return [];
+  }
+
+  return JSON.parse(response.payload.toString()) as string[];
+};
+
 /**
  * Collect every batch downstream of the given one, breadth-first.
  *
@@ -26,28 +58,14 @@ export const collectDownstream = async (
 
   while (queue.length > 0) {
     const parent = queue.shift() as string;
-    const iterator = await ctx.stub.getStateByPartialCompositeKey(DERIVED_INDEX, [parent]);
 
-    try {
-      for (;;) {
-        const next = await iterator.next();
-        if (next.done) {
-          break;
-        }
-
-        const attributes = ctx.stub.splitCompositeKey(next.value.key).attributes;
-        const child = attributes[1];
-
-        if (!child || visited.has(child)) {
-          continue;
-        }
-
-        visited.add(child);
-        ordered.push(child);
-        queue.push(child);
+    for (const child of await childrenOf(ctx, parent)) {
+      if (visited.has(child)) {
+        continue;
       }
-    } finally {
-      await iterator.close();
+      visited.add(child);
+      ordered.push(child);
+      queue.push(child);
     }
   }
 
@@ -69,9 +87,9 @@ export const cascadeRecall = async (ctx: Context, batchId: string): Promise<stri
     // Same channel, so this write set commits atomically with ours: either the
     // whole cascade lands or none of it does.
     await ctx.stub.invokeChaincode(
-      'batch-registry',
+      REGISTRY_CHAINCODE,
       ['BatchRegistryContract:RecallBatch', id],
-      'mychannel',
+      CHANNEL,
     );
   }
 

@@ -100,6 +100,47 @@ export class BatchQueryContract extends Contract {
    *
    * @returns JSON-serialised Batch[]
    */
+  /**
+   * Return the batch ids derived directly from the given batch.
+   *
+   * This exists because chaincode state is namespaced per chaincode. The
+   * 'derivedFrom~batchId' index is written by BatchRegistryContract and
+   * therefore lives in the batch-registry namespace, so coldchain-compliance
+   * cannot scan it with its own getStateByPartialCompositeKey — that call would
+   * search compliance's namespace and always come back empty. Compliance walks
+   * the graph by calling in here instead, one level at a time.
+   *
+   * @returns JSON-serialised string[] of child batch ids
+   */
+  public async GetDerivedBatches(ctx: Context, batchId: string): Promise<string> {
+    if (!batchId) {
+      throw new Error('GetDerivedBatches: batchId is required');
+    }
+
+    const iterator = await ctx.stub.getStateByPartialCompositeKey('derivedFrom~batchId', [
+      batchId,
+    ]);
+    const children: string[] = [];
+
+    try {
+      // eslint-disable-next-line no-constant-condition
+      while (true) {
+        const result = await iterator.next();
+        if (result.done) {
+          break;
+        }
+        const child = ctx.stub.splitCompositeKey(result.value.key).attributes[1];
+        if (child) {
+          children.push(child);
+        }
+      }
+    } finally {
+      await iterator.close();
+    }
+
+    return JSON.stringify(children);
+  }
+
   public async GetBatchesByHolder(ctx: Context, holderMsp: string): Promise<string> {
     if (!holderMsp) {
       throw new Error('GetBatchesByHolder: holderMsp is required');

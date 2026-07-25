@@ -127,6 +127,45 @@ status=$(ccQuery batch-registry "{\"function\":\"BatchRegistryContract:GetBatch\
 [ "$status" = "FLAGGED" ] && ok "cross-chaincode call flagged the batch" \
                           || bad "status is '$status', expected FLAGGED"
 
+step "4b. a recall cascades to derived batches"
+# A contaminated pallet gets split and repacked, so the recall has to follow the
+# derivation graph. This regression-guards a real bug: the cascade used to scan
+# the derivedFrom index in coldchain-compliance's own state namespace, where
+# batch-registry's index is invisible, so only the named batch was ever recalled.
+setUser producer1
+PARENT="${BATCH}-P"
+CHILD="${BATCH}-C"
+GRANDCHILD="${BATCH}-G"
+regBatch() {
+  local id=$1 parent=${2:-} extra=""
+  [ -n "$parent" ] && extra=",\\\"derivedFrom\\\":\\\"${parent}\\\""
+  ccInvoke batch-registry "{\"function\":\"BatchRegistryContract:RegisterBatch\",\"Args\":[\"{\\\"batchId\\\":\\\"${id}\\\",\\\"foodType\\\":\\\"chilled\\\",\\\"producedAt\\\":1700000000,\\\"shelfLifeDays\\\":9,\\\"quantity\\\":10${extra}}\"]}" >/dev/null 2>&1
+  sleep 2
+}
+regBatch "$PARENT"
+regBatch "$CHILD" "$PARENT"
+regBatch "$GRANDCHILD" "$CHILD"
+
+setUser regulator1
+for id in "$PARENT" "$CHILD" "$GRANDCHILD"; do
+  ccInvoke batch-registry "{\"function\":\"BatchRegistryContract:FlagBatch\",\"Args\":[\"${id}\",\"cascade test\",\"h\"]}" >/dev/null 2>&1
+  sleep 2
+done
+
+ccInvoke coldchain-compliance "{\"function\":\"ComplianceContract:RecallBatch\",\"Args\":[\"${PARENT}\"]}" >/dev/null 2>&1
+sleep 3
+
+statusOf() {
+  ccQuery batch-registry "{\"function\":\"BatchRegistryContract:GetBatch\",\"Args\":[\"$1\"]}" 2>/dev/null \
+    | python3 -c 'import json,sys; print(json.load(sys.stdin)["status"])' 2>/dev/null
+}
+[ "$(statusOf "$PARENT")" = "RECALLED" ] \
+  && ok "the named batch is recalled" || bad "parent is $(statusOf "$PARENT"), expected RECALLED"
+[ "$(statusOf "$CHILD")" = "RECALLED" ] \
+  && ok "the recall reached the derived batch" || bad "child is $(statusOf "$CHILD"), expected RECALLED"
+[ "$(statusOf "$GRANDCHILD")" = "RECALLED" ] \
+  && ok "the recall reached two levels down" || bad "grandchild is $(statusOf "$GRANDCHILD"), expected RECALLED"
+
 step "5. regulator reads the full history"
 setUser regulator1
 history=$(ccQuery batch-registry "{\"function\":\"BatchQueryContract:GetBatchHistory\",\"Args\":[\"${BATCH}\"]}" 2>/dev/null)
