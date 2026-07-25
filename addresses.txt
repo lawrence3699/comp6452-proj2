@@ -11,10 +11,10 @@ Network  : fabric-samples test-network, Org1MSP + Org2MSP, single orderer
 Channel  : mychannel
 
 Chaincode: batch-registry
-  Package ID          : batch-registry_1.0:3be1653ccf7a3365117dfad218b43aa952f010fcae767b98ee5278ce6dc72377
+  Package ID          : batch-registry_1.0:b76f8d7d6a1629f4a8a877f8fe52ef7d673a82d8f9106275a861963f21fdefc2
   Label               : batch-registry_1.0
   Version             : 1.0
-  Sequence            : 1
+  Sequence            : 2
   Endorsement policy  : channel default — /Channel/Application/Endorsement
                         (MAJORITY Endorsement, i.e. both Org1MSP and Org2MSP)
   Approved by         : Org1MSP, Org2MSP
@@ -24,7 +24,7 @@ Chaincode: coldchain-compliance
   Package ID          : coldchain-compliance_1.0:e2489b1126aaad4e2f2dde2ca5e2cca653e5568a728115d30fbdc8ace7e0562c
   Label               : coldchain-compliance_1.0
   Version             : 1.0
-  Sequence            : 1
+  Sequence            : 2
   Endorsement policy  : channel default — /Channel/Application/Endorsement
                         (MAJORITY Endorsement, i.e. both Org1MSP and Org2MSP)
   Approved by         : Org1MSP, Org2MSP
