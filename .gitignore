@@ -37,3 +37,6 @@ coverage/
 .claude/
 # Off-chain content-addressed store (regenerated at runtime)
 .offchain-store/
+
+# Indexer runtime state (checkpoint + event log, regenerated on run)
+.indexer/
