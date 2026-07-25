@@ -15,7 +15,7 @@
  */
 
 import { getJson } from '@comp6452/offchain-storage';
-import { loadSeries } from './readings';
+import { DEFAULT_SERIES, loadSeries } from './readings';
 import { runOracle, Submitter } from './pipeline';
 import { Reading, reportedStatFromEnv, reportedTempC } from './summarise';
 import { submit } from './submit';
@@ -46,7 +46,7 @@ export const main = async (): Promise<void> => {
   const batchId = process.env.ORACLE_BATCH_ID;
   const readings = await loadSeries({
     ...(batchId !== undefined && batchId !== '' ? { batchId } : {}),
-    count: envInt('ORACLE_READING_COUNT', 12),
+    count: envInt('ORACLE_READING_COUNT', DEFAULT_SERIES.count),
   });
 
   console.log(`oracle: ${readings.length} readings for batch ${readings[0]?.batchId ?? '(none)'}`);

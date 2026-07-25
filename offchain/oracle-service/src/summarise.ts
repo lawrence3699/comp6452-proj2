@@ -22,18 +22,40 @@ export interface Summary {
 }
 
 /**
+ * Multiply by a power of ten by editing the decimal exponent of the number's
+ * own string form, rather than by arithmetic.
+ *
+ * `1.005 * 100` evaluates to 100.49999999999999 in binary floating point, so
+ * the naive scale-round-unscale silently rounds 1.005 down to 1.00. Shifting
+ * the exponent of the shortest round-trip decimal representation avoids the
+ * multiplication entirely. `toExponential()` (rather than `toString()`) is
+ * used because values that already stringify exponentially — 1e-7 — would
+ * otherwise produce a malformed literal.
+ */
+const shiftExponent = (value: number, by: number): number => {
+  const [mantissa, exponent] = value.toExponential().split('e');
+  return Number(`${mantissa}e${String(Number(exponent) + by)}`);
+};
+
+/**
  * Round half away from zero to 2 decimals.
  *
- * The naive `Math.round(n * 100) / 100` is asymmetric for negatives
- * (`Math.round(-2.5)` is -2, not -3), which for a frozen-goods oracle sitting
- * at -18 C is exactly the region we care about. The epsilon nudge absorbs the
- * binary-float representation error that makes e.g. 1.005 * 100 come out as
- * 100.49999999999999.
+ * Rounding on the magnitude and re-applying the sign keeps the behaviour
+ * symmetric: `Math.round` alone breaks ties towards +Infinity, so -18.005
+ * would round to -18.00 while 18.005 rounds to 18.01. A frozen-goods oracle
+ * sits at exactly -18 C, so that asymmetry lands right on the threshold.
  */
 export const round2 = (value: number): number => {
-  const scaled = Math.round(Math.abs(value) * 100 + Number.EPSILON) / 100;
+  if (!Number.isFinite(value)) {
+    throw new Error(`round2 requires a finite number, got ${String(value)}`);
+  }
+  const magnitude = Math.abs(value);
+  if (magnitude === 0) {
+    return 0;
+  }
+  const rounded = shiftExponent(Math.round(shiftExponent(magnitude, 2)), -2);
   // `+ 0` normalises -0 to 0 so the string sent on chain is never "-0.00".
-  return (value < 0 ? -scaled : scaled) + 0;
+  return (value < 0 ? -rounded : rounded) + 0;
 };
 
 /**

@@ -181,6 +181,28 @@ describe('reading sources', () => {
     expect(() => generateSeries({ count: 0 })).to.throw('positive integer');
   });
 
+  it('the demo default reaches three consecutive breaching windows, so a flag is demonstrated', async () => {
+    // VIOLATIONS_BEFORE_FLAG is 3 in coldchain-compliance; a demo whose
+    // excursion is shorter than that would never exercise the flag path.
+    const submitter = sinon.stub().resolves('tx');
+    const root = await fs.mkdtemp(path.join(os.tmpdir(), 'oracle-demo-'));
+    configureBackend(new FilesystemBackend(root));
+
+    try {
+      const result = await runOracle(generateSeries(), submitter, { windowSize: 4 });
+
+      // Chilled upper bound is 4 C; a window breaches when its mean exceeds it.
+      const breaching = result.summaries.filter((s) => s.meanC > 4);
+      expect(breaching.length).to.be.at.least(3);
+      // ...and they must be the final, consecutive windows.
+      const tail = result.summaries.slice(-3);
+      expect(tail.every((s) => s.meanC > 4)).to.equal(true);
+    } finally {
+      configureBackend(undefined);
+      await fs.rm(root, { recursive: true, force: true });
+    }
+  });
+
   it('reads a series from a JSON file', async () => {
     const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'oracle-series-'));
     const file = path.join(dir, 'series.json');

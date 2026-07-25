@@ -7,6 +7,7 @@
  */
 
 export {
+  DEFAULT_USER,
   FabricConfig,
   cryptoPath,
   envOrDefault,

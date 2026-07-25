@@ -47,16 +47,23 @@ export interface SeriesOptions {
   readonly excursionFrom: number;
 }
 
+/**
+ * Sized so the demo actually reaches a flag. At the default window size of 4
+ * this is four windows: readings 0-3 compliant, then 4-15 breaching, i.e.
+ * three consecutive breaching submissions — exactly VIOLATIONS_BEFORE_FLAG in
+ * coldchain-compliance. A shorter excursion would produce a run that looks
+ * healthy and never demonstrates the flag path.
+ */
 export const DEFAULT_SERIES: SeriesOptions = {
   batchId: 'BATCH-DEMO-1',
-  count: 12,
+  count: 16,
   startAt: 1_750_000_000,
   intervalSeconds: 300,
   // Chilled range is 0..4 C (see coldchain-compliance/src/thresholds.ts), so
   // 2 C is comfortably compliant and 9 C is an unambiguous breach.
   baselineC: 2,
   excursionC: 9,
-  excursionFrom: 6,
+  excursionFrom: 4,
 };
 
 /**

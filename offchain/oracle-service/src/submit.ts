@@ -27,15 +27,14 @@ import { Summary, formatObservedAt, formatTempC, reportedStatFromEnv, reportedTe
 export const complianceContractName = (): string =>
   envOrDefault('COMPLIANCE_CONTRACT_NAME', 'ComplianceContract');
 
-/** The oracle identity. Defaults to the demo enrolment provisioned by person 4. */
-export const oracleConfig = (overrides: Partial<FabricConfig> = {}): FabricConfig => {
-  // FABRIC_USER is read by the shared config; default it to the oracle
-  // enrolment so callers do not have to remember to set it.
-  if (process.env.FABRIC_USER === undefined || process.env.FABRIC_USER === '') {
-    process.env.FABRIC_USER = envOrDefault('ORACLE_USER', 'oracle1');
-  }
-  return loadConfig(overrides);
-};
+/**
+ * Config for the oracle identity. `SubmitTemperatureReading` only accepts a
+ * certificate carrying `oracle=true`, so the default identity is `oracle1`
+ * (provisioned by person 4) rather than the generic User1 — FABRIC_USER still
+ * wins if the caller sets it.
+ */
+export const oracleConfig = (overrides: Partial<FabricConfig> = {}): FabricConfig =>
+  loadConfig(overrides, envOrDefault('ORACLE_USER', 'oracle1'));
 
 const SHA256_HEX = /^[0-9a-f]{64}$/;
 

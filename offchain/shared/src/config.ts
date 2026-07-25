@@ -64,8 +64,11 @@ export const cryptoPath = (): string =>
  * qualified directory name (`User1@org1.example.com`); Fabric CA writes the
  * former, cryptogen the latter, and the demo uses both.
  */
-export const userMspPath = (): string => {
-  const user = envOrDefault('FABRIC_USER', 'User1');
+export const DEFAULT_USER = 'User1';
+
+export const userMspPath = (
+  user: string = envOrDefault('FABRIC_USER', DEFAULT_USER),
+): string => {
   const directory = user.includes('@') ? user : `${user}@${orgDomain()}`;
   return path.join(cryptoPath(), 'users', directory, 'msp');
 };
@@ -75,19 +78,30 @@ export const userMspPath = (): string => {
  * than memoised at import time so a caller (or a unit test) can change the
  * environment and get the change, and so `submit()` and `listen()` cannot
  * disagree about which peer they are talking to.
+ *
+ * `defaultUser` lets a service choose the identity it acts as by default (the
+ * oracle signs as `oracle1`) while `FABRIC_USER` still overrides it. It is a
+ * parameter rather than the service assigning to `process.env`, because that
+ * assignment would leak into every later call in the process.
  */
-export const loadConfig = (overrides: Partial<FabricConfig> = {}): FabricConfig => ({
-  channelName: envOrDefault('CHANNEL_NAME', 'mychannel'),
-  mspId: envOrDefault('MSP_ID', 'Org1MSP'),
-  peerEndpoint: envOrDefault('PEER_ENDPOINT', 'localhost:7051'),
-  peerHostAlias: envOrDefault('PEER_HOST_ALIAS', 'peer0.org1.example.com'),
-  tlsCertPath: envOrDefault(
-    'TLS_CERT_PATH',
-    path.join(cryptoPath(), 'peers', `peer0.${orgDomain()}`, 'tls', 'ca.crt'),
-  ),
-  certDirectoryPath: envOrDefault('CERT_DIRECTORY_PATH', path.join(userMspPath(), 'signcerts')),
-  keyDirectoryPath: envOrDefault('KEY_DIRECTORY_PATH', path.join(userMspPath(), 'keystore')),
-  complianceChaincode: envOrDefault('COMPLIANCE_CHAINCODE', 'coldchain-compliance'),
-  registryChaincode: envOrDefault('REGISTRY_CHAINCODE', 'batch-registry'),
-  ...overrides,
-});
+export const loadConfig = (
+  overrides: Partial<FabricConfig> = {},
+  defaultUser: string = DEFAULT_USER,
+): FabricConfig => {
+  const mspDir = userMspPath(envOrDefault('FABRIC_USER', defaultUser));
+  return {
+    channelName: envOrDefault('CHANNEL_NAME', 'mychannel'),
+    mspId: envOrDefault('MSP_ID', 'Org1MSP'),
+    peerEndpoint: envOrDefault('PEER_ENDPOINT', 'localhost:7051'),
+    peerHostAlias: envOrDefault('PEER_HOST_ALIAS', 'peer0.org1.example.com'),
+    tlsCertPath: envOrDefault(
+      'TLS_CERT_PATH',
+      path.join(cryptoPath(), 'peers', `peer0.${orgDomain()}`, 'tls', 'ca.crt'),
+    ),
+    certDirectoryPath: envOrDefault('CERT_DIRECTORY_PATH', path.join(mspDir, 'signcerts')),
+    keyDirectoryPath: envOrDefault('KEY_DIRECTORY_PATH', path.join(mspDir, 'keystore')),
+    complianceChaincode: envOrDefault('COMPLIANCE_CHAINCODE', 'coldchain-compliance'),
+    registryChaincode: envOrDefault('REGISTRY_CHAINCODE', 'batch-registry'),
+    ...overrides,
+  };
+};
