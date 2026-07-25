@@ -32,3 +32,8 @@ coverage/
 .DS_Store
 .idea/
 .vscode/
+
+# Local agent working notes
+.claude/
+# Off-chain content-addressed store (regenerated at runtime)
+.offchain-store/

@@ -1,29 +1,27 @@
 {
-  "name": "coldchain-compliance",
+  "name": "@comp6452/offchain-shared",
   "version": "1.0.0",
-  "description": "Cold chain compliance and recall chaincode",
-  "main": "dist/index.js",
+  "description": "Shared Fabric gateway connection helper for the off-chain services",
+  "main": "src/index.ts",
+  "types": "src/index.ts",
   "engines": {
     "node": ">=18"
   },
   "scripts": {
     "build": "tsc",
-    "start": "fabric-chaincode-node start",
     "test": "mocha"
   },
   "dependencies": {
-    "fabric-contract-api": "^2.5.4",
-    "fabric-shim": "^2.5.4"
+    "@grpc/grpc-js": "^1.10.6",
+    "@hyperledger/fabric-gateway": "^1.7.0"
   },
   "devDependencies": {
     "@types/chai": "^4.3.11",
-    "@types/chai-as-promised": "^7.1.8",
     "@types/mocha": "^10.0.6",
     "@types/node": "^18.19.0",
     "@types/sinon": "^17.0.2",
     "@types/sinon-chai": "^3.2.12",
     "chai": "^4.4.1",
-    "chai-as-promised": "^7.1.2",
     "mocha": "^10.2.0",
     "sinon": "^17.0.1",
     "sinon-chai": "^3.7.0",

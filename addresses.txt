@@ -5,18 +5,54 @@ deterministic hash of the chaincode package, together with the channel it is
 committed to. There is no account address as there would be on an
 account-based ledger such as Ethereum.
 
-Platform : Hyperledger Fabric 2.5
-Network  : <test-network, organisations>
+Platform : Hyperledger Fabric 2.5.13 (Fabric CA 1.5.15)
+Network  : fabric-samples test-network, Org1MSP + Org2MSP, single orderer
+           (orderer.example.com), Raft consensus
 Channel  : mychannel
 
 Chaincode: batch-registry
-  Package ID          : <fill in from: peer lifecycle chaincode queryinstalled>
+  Package ID          : batch-registry_1.0:740eda90ce3acca08601367fb1ecab200554c0b0b49f57b02751858ecd71e552
+  Label               : batch-registry_1.0
+  Version             : 1.0
   Sequence            : 1
-  Endorsement policy  : <fill in>
+  Endorsement policy  : channel default — /Channel/Application/Endorsement
+                        (MAJORITY Endorsement, i.e. both Org1MSP and Org2MSP)
+  Approved by         : Org1MSP, Org2MSP
+  Contracts           : BatchRegistryContract, BatchQueryContract
 
 Chaincode: coldchain-compliance
-  Package ID          : <fill in>
+  Package ID          : coldchain-compliance_1.0:748623ad6cf2d706eaf69389232d27f76928474901ce63cc208ef4fad2ecdb8c
+  Label               : coldchain-compliance_1.0
+  Version             : 1.0
   Sequence            : 1
-  Endorsement policy  : <fill in>
+  Endorsement policy  : channel default — /Channel/Application/Endorsement
+                        (MAJORITY Endorsement, i.e. both Org1MSP and Org2MSP)
+  Approved by         : Org1MSP, Org2MSP
+  Contracts           : ComplianceContract
 
-Private data collection: <name, member orgs>
+Private data collection
+  Name                : batchPrivateDetails
+  Attached to         : batch-registry (committed with --collections-config)
+  Member orgs policy  : OR('Org1MSP.member','Org2MSP.member')
+  requiredPeerCount   : 0
+  maxPeerCount        : 1
+  blockToLive         : 0 (never purged)
+  memberOnlyRead      : true
+  memberOnlyWrite     : true
+
+NOTE ON PACKAGE IDS
+  The package ID is a SHA-256 over the chaincode package, so it changes
+  whenever the package contents change. The ids above are those of the
+  deployment verified end to end on 2026-07-25. Re-running network/deployCC.sh
+  on another machine produces different ids; read the current values with
+
+    peer lifecycle chaincode queryinstalled
+
+DEPLOYMENT MODEL
+  Both chaincodes are deployed as Chaincode-as-a-Service (package type "ccaas")
+  rather than through the peer's built-in Docker builder. The peer's builder
+  calls a legacy Docker image-build API that Docker 29 no longer serves, which
+  fails with "docker image build failed: write unix -> /run/docker.sock: broken
+  pipe". Under CCaaS the chaincode runs as its own container that the peer
+  dials, which is a supported Fabric 2.5 deployment mode and is unaffected.
+  See readme.txt section 4 and network/deployCC.sh.

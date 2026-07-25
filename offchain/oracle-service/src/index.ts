@@ -4,29 +4,38 @@
  * Reads raw temperature observations, aggregates them off chain, stores the
  * raw series through the storage adapter, and submits only the summary plus
  * the storage hash to coldchain-compliance.
+ *
+ * Three of the Task 3 requirements meet here: the oracle (data the ledger
+ * cannot fetch itself), off-chain computation (`summarise`, which reduces a
+ * whole series to four numbers so the ledger stores a summary rather than a
+ * stream), and off-chain storage (the raw series, anchored by `rawDataHash`).
  */
 
-export interface Reading {
-  readonly batchId: string;
-  readonly tempC: number;
-  readonly observedAt: number;
-}
+export { Reading, Summary, ReportedStat } from './summarise';
+export {
+  formatObservedAt,
+  formatTempC,
+  reportedStatFromEnv,
+  reportedTempC,
+  round2,
+  summarise,
+  window,
+} from './summarise';
 
-export interface Summary {
-  readonly batchId: string;
-  readonly meanC: number;
-  readonly maxC: number;
-  readonly minC: number;
-  readonly observedAt: number;
-}
+export {
+  complianceContractName,
+  oracleConfig,
+  submit,
+  submitAll,
+  submitWith,
+} from './submit';
 
-// TODO(person 3): pure aggregation, unit tested without a network.
-export const summarise = (_readings: readonly Reading[]): Summary => {
-  throw new Error('not implemented');
-};
+export {
+  DEFAULT_SERIES,
+  SeriesOptions,
+  generateSeries,
+  loadSeries,
+  readSeriesFile,
+} from './readings';
 
-// TODO(person 3): submit through the Fabric gateway using the oracle identity,
-// calling SubmitTemperatureReading on coldchain-compliance.
-export const submit = async (_summary: Summary, _rawDataHash: string): Promise<void> => {
-  throw new Error('not implemented');
-};
+export { OracleRunResult, anchorSeries, runOracle } from './pipeline';
