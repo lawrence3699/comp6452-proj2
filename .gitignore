@@ -16,6 +16,7 @@ wallet/
 bin/
 config/
 *.tar.gz
+network/identities/
 
 # go
 vendor/
