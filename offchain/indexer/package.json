@@ -10,6 +10,10 @@
     "build": "tsc",
     "test": "mocha"
   },
+  "dependencies": {
+    "@grpc/grpc-js": "^1.14.0",
+    "@hyperledger/fabric-gateway": "^1.12.0"
+  },
   "devDependencies": {
     "@types/chai": "^4.3.11",
     "@types/mocha": "^10.0.6",

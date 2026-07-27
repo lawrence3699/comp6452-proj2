@@ -110,10 +110,50 @@ export const reset = (): void => store.reset();
 export const historyFor = async (batchId: string): Promise<IndexedEvent[]> =>
   store.history(batchId);
 
-// TODO(person 3, Phase 2): with the Fabric gateway, subscribe to chaincode
-// events from both batch-registry and coldchain-compliance, decode each with
-// parseEvent(name, payload, { blockNumber, txId }) and record() it. Use a
-// checkpointer so a restart resumes from the last processed block.
+/** A raw chaincode event as delivered by the gateway (or a test double). */
+export interface RawChaincodeEvent {
+  readonly eventName: string;
+  readonly payload: Uint8Array;
+  readonly blockNumber: number;
+  readonly transactionId: string;
+}
+
+/** A stream of raw events: one chaincode's subscription, or a fake for tests. */
+export interface EventSource {
+  events(): AsyncIterable<RawChaincodeEvent>;
+}
+
+/**
+ * Drain one event source into the index: decode each event and record the ones
+ * this indexer understands, skipping the rest. Runs until the source ends.
+ * Network-agnostic — drive it with a fake source in tests.
+ */
+export const consume = async (source: EventSource, sink: EventStore = store): Promise<void> => {
+  for await (const raw of source.events()) {
+    try {
+      const event = parseEvent(raw.eventName, Buffer.from(raw.payload), {
+        blockNumber: raw.blockNumber,
+        txId: raw.transactionId,
+      });
+      sink.record(event);
+    } catch {
+      // An event this indexer does not track (unknown name, malformed payload).
+    }
+  }
+};
+
+/**
+ * Default entry point: subscribe to batch-registry and coldchain-compliance
+ * events and index both concurrently. Gateway wiring lives in ./gateway and is
+ * imported lazily so the pure logic and its tests never load fabric-gateway.
+ * UNVERIFIED until the network is up and person 4 supplies connection config.
+ */
 export const listen = async (): Promise<void> => {
-  throw new Error('not implemented');
+  const { connectEventSources } = await import('./gateway');
+  const { sources, close } = await connectEventSources();
+  try {
+    await Promise.all(sources.map((source) => consume(source)));
+  } finally {
+    close();
+  }
 };
