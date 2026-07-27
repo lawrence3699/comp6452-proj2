@@ -284,6 +284,21 @@ export class BatchRegistryContract extends Contract {
     return JSON.stringify(batch);
   }
 
+  /** Return the direct child batches used by coldchain-compliance recall cascades. */
+  public async GetDerivedBatches(ctx: Context, batchId: string): Promise<string> {
+    if (!batchId) {
+      throw new Error('GetDerivedBatches: batchId is required');
+    }
+
+    const children: string[] = [];
+    for await (const entry of ctx.stub.getStateByPartialCompositeKey(DERIVED_INDEX, [batchId])) {
+      const { attributes } = ctx.stub.splitCompositeKey(entry.key);
+      children.push(attributes[1]);
+    }
+
+    return JSON.stringify(children);
+  }
+
   /** True when the batch exists — cheaper than GetBatch for existence checks. */
   public async BatchExists(ctx: Context, batchId: string): Promise<boolean> {
     const raw = await ctx.stub.getState(batchId);

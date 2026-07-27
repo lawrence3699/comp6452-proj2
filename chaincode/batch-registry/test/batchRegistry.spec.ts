@@ -8,7 +8,7 @@ const { expect } = chai;
 
 import { Batch, BatchStatus } from '../src/batch';
 import { canTransition } from '../src/stateMachine';
-import { BatchRegistryContract, HOLDER_INDEX } from '../src/batchRegistry';
+import { BatchRegistryContract, DERIVED_INDEX, HOLDER_INDEX } from '../src/batchRegistry';
 import { Role } from '../src/access';
 
 describe('state machine', () => {
@@ -59,6 +59,18 @@ const makeContext = (nowSeconds = 1_800_000_000): TestCtx => {
     },
     createCompositeKey: (objectType: string, attributes: string[]) =>
       `\u0000${objectType}\u0000${attributes.join('\u0000')}\u0000`,
+    splitCompositeKey: (key: string) => {
+      const parts = key.split('\u0000');
+      return { objectType: parts[1], attributes: parts.slice(2, -1) };
+    },
+    getStateByPartialCompositeKey: async function* (objectType: string, attributes: string[]) {
+      const prefix = `\u0000${objectType}\u0000${attributes.join('\u0000')}\u0000`;
+      for (const [key, value] of ledger.state) {
+        if (key.startsWith(prefix)) {
+          yield { key, value };
+        }
+      }
+    },
     getTxTimestamp: () => ({ seconds: nowSeconds, nanos: 0 }),
     getTransient: () => new Map<string, Uint8Array>(),
     setEvent: (name: string, payload: Buffer) => {
@@ -87,7 +99,7 @@ const makeContext = (nowSeconds = 1_800_000_000): TestCtx => {
 const producer = { role: Role.Producer };
 const regulator = { role: Role.Regulator };
 
-const validBatch = (over: Partial<Batch> & { batchId: string }) =>
+const validBatch = (over: Partial<Batch> & { batchId: string; derivedFrom?: string }) =>
   JSON.stringify({
     foodType: 'chilled',
     producedAt: 1_700_000_000,
@@ -193,6 +205,24 @@ describe('BatchRegistryContract', () => {
     await expect(cc.RegisterBatch(t.ctx, validBatch({ batchId: 'B7' }))).to.be.rejectedWith(
       /already exists/,
     );
+  });
+
+  it('returns only the direct batches derived from a parent', async () => {
+    t.setCaller('Org1MSP', producer);
+    await cc.RegisterBatch(t.ctx, validBatch({ batchId: 'PARENT' }));
+    await cc.RegisterBatch(t.ctx, validBatch({ batchId: 'CHILD-A', derivedFrom: 'PARENT' }));
+    await cc.RegisterBatch(t.ctx, validBatch({ batchId: 'CHILD-B', derivedFrom: 'PARENT' }));
+    await cc.RegisterBatch(t.ctx, validBatch({ batchId: 'OTHER', derivedFrom: 'ELSEWHERE' }));
+
+    const children = JSON.parse(await cc.GetDerivedBatches(t.ctx, 'PARENT')) as string[];
+    expect(children).to.deep.equal(['CHILD-A', 'CHILD-B']);
+
+    const childKey = t.ctx.stub.createCompositeKey(DERIVED_INDEX, ['PARENT', 'CHILD-A']);
+    expect(t.ledger.state.has(childKey)).to.equal(true);
+  });
+
+  it('returns an empty derived-batch list when a batch has no children', async () => {
+    expect(JSON.parse(await cc.GetDerivedBatches(t.ctx, 'LEAF'))).to.deep.equal([]);
   });
 
   it('lets the oracle flag a batch through the compliance path', async () => {
