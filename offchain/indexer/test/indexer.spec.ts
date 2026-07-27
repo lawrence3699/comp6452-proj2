@@ -24,10 +24,17 @@ describe('parseEvent', () => {
     expect(event.details).to.deep.equal({ from: 'Org1MSP', to: 'Org2MSP' });
   });
 
-  it('decodes a BatchFlagged event', () => {
-    const payload = JSON.stringify({ batchId: 'B1', reason: 'temp breach', evidenceHash: 'abc', timestamp: 3000 });
+  it('decodes a BatchFlagged event, ignoring extra fields like flaggedBy', () => {
+    const payload = JSON.stringify({ batchId: 'B1', reason: 'temp breach', evidenceHash: 'abc', flaggedBy: 'oracle', timestamp: 3000 });
     const event = parseEvent('BatchFlagged', payload);
-    expect(event.details).to.deep.equal({ reason: 'temp breach', evidenceHash: 'abc' });
+    expect(event.details).to.deep.equal({ reason: 'temp breach', evidenceHash: 'abc', flaggedBy: 'oracle' });
+  });
+
+  it('decodes a BatchRecalled event', () => {
+    const event = parseEvent('BatchRecalled', JSON.stringify({ batchId: 'B1', timestamp: 4000 }));
+    expect(event.name).to.equal('BatchRecalled');
+    expect(event.batchId).to.equal('B1');
+    expect(event.details).to.deep.equal({});
   });
 
   it('accepts a Buffer payload and carries ledger coordinates', () => {

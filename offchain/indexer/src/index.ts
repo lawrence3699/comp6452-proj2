@@ -1,8 +1,8 @@
 /**
  * Chaincode event indexer — owner: person 3.
  *
- * Consumes BatchRegistered, CustodyTransferred and BatchFlagged, persists
- * them, and serves the fast traceability queries behind FR2 and NFR1.
+ * Consumes BatchRegistered, CustodyTransferred, BatchFlagged and BatchRecalled,
+ * persists them, and serves the fast traceability queries behind FR2 and NFR1.
  *
  * The parse and query logic is pure and network-free so it can be unit tested
  * without a Fabric network. `listen()` (Phase 2) is the only part that needs
@@ -10,12 +10,17 @@
  * same index the tests exercise directly.
  */
 
-export type EventName = 'BatchRegistered' | 'CustodyTransferred' | 'BatchFlagged';
+export type EventName =
+  | 'BatchRegistered'
+  | 'CustodyTransferred'
+  | 'BatchFlagged'
+  | 'BatchRecalled';
 
 const EVENT_NAMES: readonly EventName[] = [
   'BatchRegistered',
   'CustodyTransferred',
   'BatchFlagged',
+  'BatchRecalled',
 ];
 
 export interface IndexedEvent {

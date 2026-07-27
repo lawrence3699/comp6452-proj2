@@ -46,9 +46,9 @@ id and the crypto material paths.
 
 | Variable | Used by | Example |
 |---|---|---|
-| `ORACLE_PEER_ENDPOINT` | oracle | `localhost:7051` |
-| `ORACLE_PEER_HOST_ALIAS` | oracle | `peer0.org1.example.com` |
-| `ORACLE_MSP_ID` | oracle | `Org1MSP` |
+| `ORACLE_PEER_ENDPOINT` | oracle | `localhost:9051` (Org2 peer) |
+| `ORACLE_PEER_HOST_ALIAS` | oracle | `peer0.org2.example.com` |
+| `ORACLE_MSP_ID` | oracle | `Org2MSP` |
 | `ORACLE_TLS_ROOT_CERT` | oracle | path to the peer TLS CA cert |
 | `ORACLE_CERT` | oracle | path to the oracle identity cert **(must carry the `oracle` attribute)** |
 | `ORACLE_KEY` | oracle | path to the oracle identity private key |
@@ -61,5 +61,9 @@ id and the crypto material paths.
 | `CHANNEL_NAME` | both | defaults to `mychannel` |
 | `COMPLIANCE_CHAINCODE` | oracle | defaults to `coldchain-compliance` |
 
-The oracle identity **must** be enrolled with the `oracle` attribute that
-`coldchain-compliance`'s `assertOracle` checks, or every submission is rejected.
+The oracle identity **must** be enrolled with `oracle=true` — the exact value
+`coldchain-compliance`'s `assertOracle` checks — or every submission is
+rejected. Person 4's `network/scripts/setupDemoIdentities.sh` issues this as
+`oracle1` in **Org2** (`oracle=true:ecert`), so the oracle runs against the
+Org2 peer. The indexer only reads events, so it can use any enrolled member
+identity (e.g. Org1's `regulator1`).
