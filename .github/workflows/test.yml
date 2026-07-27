@@ -1,4 +1,4 @@
-name: chaincode tests
+name: unit tests
 
 on:
   push:
@@ -14,6 +14,9 @@ jobs:
         package:
           - chaincode/batch-registry
           - chaincode/coldchain-compliance
+          - offchain/oracle-service
+          - offchain/storage
+          - offchain/indexer
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4

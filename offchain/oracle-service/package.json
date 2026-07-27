@@ -1,0 +1,22 @@
+{
+  "name": "@offchain/oracle-service",
+  "version": "1.0.0",
+  "description": "Temperature aggregation oracle: reads raw readings, aggregates off chain, submits a signed summary to coldchain-compliance",
+  "main": "dist/index.js",
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "build": "tsc",
+    "test": "mocha"
+  },
+  "devDependencies": {
+    "@types/chai": "^4.3.11",
+    "@types/mocha": "^10.0.6",
+    "@types/node": "^18.19.0",
+    "chai": "^4.4.1",
+    "mocha": "^10.2.0",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.3.3"
+  }
+}
