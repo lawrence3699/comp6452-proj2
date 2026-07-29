@@ -57,6 +57,10 @@ const makeContext = (): TestContext => {
       state.set(key, value);
     },
 
+    setEvent: (_name: string, _payload: Buffer) => {
+      /* no-op: event delivery is exercised by the live demo, not this unit test */
+    },
+
     createCompositeKey: (objectType: string, attributes: string[]) =>
       `\u0000${objectType}\u0000${attributes.join('\u0000')}\u0000`,
 

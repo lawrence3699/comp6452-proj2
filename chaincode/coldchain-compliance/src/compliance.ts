@@ -295,6 +295,24 @@ export class ComplianceContract extends Contract {
         reason,
         rawDataHash,
       );
+
+      // Emit BatchFlagged from this (top-level) chaincode as well. The event
+      // that FlagBatch sets inside the nested invokeChaincode above is NOT
+      // delivered to chaincode-event listeners — Fabric only surfaces the
+      // top-level chaincode's event — so the off-chain indexer would otherwise
+      // never see the automated flag. Payload mirrors batch-registry's.
+      ctx.stub.setEvent(
+        'BatchFlagged',
+        Buffer.from(
+          JSON.stringify({
+            batchId,
+            reason,
+            evidenceHash: rawDataHash,
+            flaggedBy: 'oracle',
+            timestamp: observedAt,
+          }),
+        ),
+      );
     }
   }
 

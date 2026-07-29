@@ -49,7 +49,7 @@ for org in 1 2; do
     --tls --cafile "${ORDERER_CA}" \
     --channelID "${CHANNEL_NAME}" --name "${CC_NAME}" \
     --version "${CC_VERSION}" --package-id "${PACKAGE_ID}" --sequence "${CC_SEQUENCE}" \
-    "${COLLECTIONS_FLAG[@]}"
+    ${COLLECTIONS_FLAG[@]+"${COLLECTIONS_FLAG[@]}"}
 done
 
 echo "== committing =="
@@ -61,7 +61,7 @@ peer lifecycle chaincode commit \
   --channelID "${CHANNEL_NAME}" --name "${CC_NAME}" \
   --version "${CC_VERSION}" --sequence "${CC_SEQUENCE}" \
   $(peerAddressFlagsForOrg 1) $(peerAddressFlagsForOrg 2) \
-  "${COLLECTIONS_FLAG[@]}"
+  ${COLLECTIONS_FLAG[@]+"${COLLECTIONS_FLAG[@]}"}
 
 echo "== ${CC_NAME} committed at version ${CC_VERSION}, sequence ${CC_SEQUENCE} =="
 echo "package ID (record this in addresses.txt): ${PACKAGE_ID}"

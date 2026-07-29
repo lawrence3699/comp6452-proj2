@@ -5,18 +5,26 @@ deterministic hash of the chaincode package, together with the channel it is
 committed to. There is no account address as there would be on an
 account-based ledger such as Ethereum.
 
-Platform : Hyperledger Fabric 2.5
-Network  : <test-network, organisations>
+Platform : Hyperledger Fabric 2.5.16
+Network  : fabric-samples test-network, CA-based (Org1MSP, Org2MSP, orderer)
 Channel  : mychannel
 
 Chaincode: batch-registry
-  Package ID          : <fill in from: peer lifecycle chaincode queryinstalled>
+  Package ID          : batch-registry_1:a34c12a70fbd9c5a7e8d21c2f43492e29971d6860ebf1166ca4bf4fc8c954e5e
   Sequence            : 1
-  Endorsement policy  : <fill in>
+  Version             : 1
+  Endorsement policy  : channel default (majority of Org1MSP, Org2MSP)
 
 Chaincode: coldchain-compliance
-  Package ID          : <fill in>
+  Package ID          : coldchain-compliance_1:d784528d2cd8a980dfa0b5b2293a5a6fd856797bcfbc1376f42e3465ff1b5bd5
   Sequence            : 1
-  Endorsement policy  : <fill in>
+  Version             : 1
+  Endorsement policy  : channel default (majority of Org1MSP, Org2MSP)
 
-Private data collection: <name, member orgs>
+Private data collection: batchPrivateDetails
+  Members  : Org1MSP, Org2MSP  (OR('Org1MSP.member','Org2MSP.member'))
+  Attached at commit of batch-registry via --collections-config network/collections_config.json
+
+Note: package IDs are content hashes and will change if the chaincode source
+changes. Regenerate the network and read the current IDs with:
+  peer lifecycle chaincode queryinstalled

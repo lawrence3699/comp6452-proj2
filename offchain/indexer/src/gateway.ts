@@ -63,8 +63,11 @@ export const connectEventSources = async (): Promise<EventSources> => {
   const gateway = connect({ client, identity, signer, hash: hash.sha256 });
 
   const network = gateway.getNetwork(channelName);
+  // startBlock 0 replays the batch's full history on start, so a fresh indexer
+  // rebuilds the whole traceability trail. A production indexer would persist a
+  // checkpoint and resume from it instead.
   const streams = await Promise.all(
-    INDEXED_CHAINCODES.map((name) => network.getChaincodeEvents(name)),
+    INDEXED_CHAINCODES.map((name) => network.getChaincodeEvents(name, { startBlock: BigInt(0) })),
   );
 
   const sources: EventSource[] = streams.map((stream) => ({
