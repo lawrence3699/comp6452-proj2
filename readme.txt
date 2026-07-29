@@ -1,5 +1,5 @@
 COMP6452 26T2 Project 2 Task 3
-Fresh food supply chain traceability on Hyperledger Fabric
+Pasteurised milk cold-chain traceability and automated recall on Hyperledger Fabric
 
 TEAM
   Yan, Chaoliang  (z5643222)
@@ -74,10 +74,10 @@ them from scratch.
    Each actor runs as its own identity by exporting its env file. Run from the
    repo root, one step per terminal.
 
-   1. Producer registers a chilled batch B1 (allowed range 0-4C):
+   1. Producer registers a pasteurised-milk batch B1 (chilled profile, 0-4C):
         export $(cat network/identities/producer1.env | xargs)
         cd application && npm install
-        npm run producer -- B1 chilled 14 "Farm A" 500 12 "ok"
+        npm run producer -- B1 pasteurised-milk 14 "Dairy A" 500 12 "ok"
 
    2. Second terminal — start the indexer (any member identity; read only). It
       replays B1's history and prints new events live:

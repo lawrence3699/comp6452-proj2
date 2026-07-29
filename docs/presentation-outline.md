@@ -8,7 +8,7 @@ convert to PowerPoint/Google Slides. `[FILL]` marks what only you know.
 
 ## Slide 1 — Title + who did what
 
-**Blockchain-based cold-chain traceability for a fresh-food supply chain**
+**Blockchain-based cold-chain traceability and automated recall for pasteurised milk**
 Hyperledger Fabric proof of concept · COMP6452 26T2 · Team of 4
 
 | Member | zID | Responsibility |
@@ -25,8 +25,8 @@ Hyperledger Fabric proof of concept · COMP6452 26T2 · Team of 4
 
 ## Slide 2 — Problem & why blockchain
 
-- Domain: **chilled/frozen fresh-food** supply chain (not "supply chain" in
-  general — perishables have a hard temperature constraint).
+- Domain: **pasteurised-milk cold chain** — a concrete product with a chilled
+  0–4°C profile, short shelf life, and time-critical contamination recalls.
 - Multi-party, low trust: producer → transporter → warehouse → **regulator**.
   No single party should own the record; nobody can quietly rewrite history.
 - What blockchain buys us here:
@@ -88,7 +88,7 @@ Hyperledger Fabric proof of concept · COMP6452 26T2 · Team of 4
 | Confidentiality of price/notes | Fabric **private data collection** |
 
 ### Changes after Task 2 feedback  `[FILL — what did the markers say?]`
-- e.g. *scoped the domain from "supply chain" to chilled/frozen perishables*
+- e.g. *scoped the domain from "supply chain" to pasteurised milk*
 - e.g. *separated FRs from NFRs, rewrote with MUST/SHOULD (RFC 2119)*
 - e.g. *moved role from a tx argument to a cryptographic ABAC attribute*
 - e.g. *added the alternative design (centralised DB) comparison* `[FILL]`
@@ -121,7 +121,7 @@ Hyperledger Fabric proof of concept · COMP6452 26T2 · Team of 4
 Pre-staged: network up, chaincode deployed, identities registered (sections
 3–4 of readme.txt). Three terminals.
 
-1. **Producer registers** a chilled batch B1 (allowed 0–4 °C).
+1. **Producer registers** a pasteurised-milk batch B1 (chilled profile, 0–4 °C).
 2. **Indexer** (terminal 2) is already listening — shows `BatchRegistered`.
 3. **Oracle** (terminal 3) replays 3 temperature windows (max 14/16/15.5 °C):
    aggregate → store raw series off chain → submit summary on chain.

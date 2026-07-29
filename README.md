@@ -1,7 +1,8 @@
 # COMP6452 26T2 — Project 2, Task 3
 
-Blockchain-based traceability proof of concept for a fresh food supply chain,
-built on Hyperledger Fabric.
+Blockchain-based cold-chain traceability and automated recall proof of concept
+for pasteurised milk, built on Hyperledger Fabric. `pasteurised-milk` uses the
+existing chilled temperature profile of 0–4°C.
 
 ## Team
 

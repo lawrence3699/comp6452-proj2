@@ -48,10 +48,10 @@ describe('cold chain traceability (end to end)', function () {
 
     const batchJson = JSON.stringify({
       batchId,
-      foodType: 'chilled',
+      foodType: 'pasteurised-milk',
       producedAt: Math.floor(Date.now() / 1000),
       shelfLifeDays: 14,
-      origin: 'Farm A',
+      origin: 'Dairy A',
       quantity: 500,
     });
 
@@ -93,7 +93,7 @@ describe('cold chain traceability (end to end)', function () {
     const config = await configFromFile(envPath('oracle1'));
     const contract = getContract(oracle, config, COMPLIANCE_CHAINCODE);
 
-    // 'chilled' batches must stay between 0C and 4C (thresholds.ts) — 15C is
+    // Pasteurised milk must stay between 0C and 4C (thresholds.ts) — 15C is
     // a breach on every reading. VIOLATIONS_BEFORE_FLAG readings are needed
     // before coldchain-compliance calls into batch-registry to flag it.
     for (let i = 0; i < 3; i++) {

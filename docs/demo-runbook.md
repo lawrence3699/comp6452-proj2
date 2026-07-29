@@ -1,8 +1,9 @@
 # Demo runbook — Task 3 presentation
 
-Cold-chain traceability: producer registers a batch, the oracle aggregates
-temperature readings off chain and submits them, coldchain-compliance flags the
-batch after 3 breaches, and the indexer shows the full traceability trail.
+Pasteurised-milk cold-chain traceability: a producer registers a milk batch,
+the oracle aggregates temperature readings off chain and submits them,
+coldchain-compliance flags the batch after 3 breaches, and the indexer shows
+the full traceability trail.
 
 Everything below has been verified end to end. **Do a full rehearsal before the
 presentation.**
@@ -29,10 +30,10 @@ batches yet — you register one live.
 ## 2. The live demo (3 terminals, from repo root)
 `cd ~/Documents/comp6452` in each terminal first.
 
-### Terminal 1 — producer registers a chilled batch B1
+### Terminal 1 — producer registers a pasteurised-milk batch B1
 ```bash
 export $(cat network/identities/producer1.env | xargs)
-npm --prefix application run producer -- B1 chilled 14 "Farm A" 500 12 "ok"
+npm --prefix application run producer -- B1 pasteurised-milk 14 "Dairy A" 500 12 "ok"
 ```
 → prints `registered batch B1`.
 
@@ -48,15 +49,16 @@ DEMO_BATCH_ID=B1 npm --prefix offchain/demo run indexer
 export $(cat network/identities/oracle1.env | xargs)
 npm --prefix offchain/demo run oracle
 ```
-→ replays 3 temperature windows (max 14 / 16 / 15.5 °C, all breach chilled
-0–4 °C): aggregate → store raw series off chain → submit on chain.
+→ replays 3 temperature windows (max 14 / 16 / 15.5 °C, all breach the
+pasteurised-milk chilled profile of 0–4 °C): aggregate → store raw series off
+chain → submit on chain.
 
 ### The payoff
 Within ~3s, **Terminal 2 (indexer) now shows 2 events**:
 ```
 B1: 2 event(s)
   BatchRegistered   {"producer":"Org1MSP"}
-  BatchFlagged      {"reason":"3 consecutive temperature violations for chilled;
+  BatchFlagged      {"reason":"3 consecutive temperature violations for pasteurised-milk;
                       expected 0C to 4C, latest reading 15.5C",
                       "evidenceHash":"<sha256>","flaggedBy":"oracle"}
 ```
