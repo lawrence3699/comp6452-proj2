@@ -2,8 +2,24 @@ import { Context } from 'fabric-contract-api';
 
 export const ORACLE_ATTRIBUTE = 'oracle';
 
-// TODO(person 2): only identities carrying the oracle attribute may submit
-// readings. Reject everything else with a clear error.
-export const assertOracle = (_ctx: Context): void => {
-  throw new Error('not implemented');
+/**
+ * Checks whether the current caller is an authorised oracle.
+ */
+export const assertOracle = (ctx: Context): void => {
+  const oracleAttribute =
+    ctx.clientIdentity.getAttributeValue(
+      ORACLE_ATTRIBUTE,
+    );
+
+  if (oracleAttribute === null) {
+    throw new Error(
+      "access denied: caller certificate carries no 'oracle' attribute",
+    );
+  }
+
+  if (oracleAttribute !== 'true') {
+    throw new Error(
+      "access denied: caller certificate must carry 'oracle=true'",
+    );
+  }
 };
