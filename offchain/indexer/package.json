@@ -1,0 +1,26 @@
+{
+  "name": "@offchain/indexer",
+  "version": "1.0.0",
+  "description": "Chaincode event indexer: consumes BatchRegistered / CustodyTransferred / BatchFlagged, persists them, and serves fast per-batch traceability queries",
+  "main": "dist/index.js",
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "build": "tsc",
+    "test": "mocha"
+  },
+  "dependencies": {
+    "@grpc/grpc-js": "^1.14.0",
+    "@hyperledger/fabric-gateway": "^1.12.0"
+  },
+  "devDependencies": {
+    "@types/chai": "^4.3.11",
+    "@types/mocha": "^10.0.6",
+    "@types/node": "^18.19.0",
+    "chai": "^4.4.1",
+    "mocha": "^10.2.0",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.3.3"
+  }
+}

@@ -28,7 +28,26 @@ them from scratch.
    <commands, one per chaincode>
 
 5. RUNNING THE OFF-CHAIN SERVICES
-   <commands>
+   The off-chain layer is three npm packages under offchain/: oracle-service,
+   storage and indexer. Install each with `npm install`.
+
+   The oracle and indexer reach the peer through the Fabric Gateway and are
+   configured from environment variables (ORACLE_* and INDEXER_*); see
+   offchain/README.md ("Configuration") for the full list. Point them at the
+   peer brought up in section 3.
+
+   IMPORTANT: the oracle client identity must be enrolled with the 'oracle'
+   attribute, otherwise coldchain-compliance rejects its temperature readings.
+
+   Entry points:
+     - oracle-service: runOracleCycle() aggregates a window of readings, stores
+       the raw series, and submits the summary; submit() is the gateway-backed
+       shortcut used by the demo runner.
+     - indexer: listen() subscribes to batch-registry and coldchain-compliance
+       events; historyFor(batchId) returns a batch's ordered history.
+
+   The demo runner that wires these to the live gateway and a reading feed is
+   invoked in section 6.
 
 6. RUNNING THE DEMO
    <commands>
@@ -36,4 +55,7 @@ them from scratch.
 7. RUNNING THE TESTS
    cd chaincode/batch-registry && npm install && npm test
    cd chaincode/coldchain-compliance && npm install && npm test
+   cd offchain/oracle-service && npm install && npm test
+   cd offchain/storage && npm install && npm test
+   cd offchain/indexer && npm install && npm test
    <integration tests>
