@@ -42,18 +42,19 @@ const recordingStore = (hash: string): RecordingStore => {
 };
 
 describe('toReadingArgs', () => {
-  it('maps a summary and hash to the chaincode arg order, all as strings', () => {
-    expect(toReadingArgs(summary, 'HASH')).to.deep.equal(['B1', '3.33', '1700', 'HASH']);
+  it('maps a summary and hash to the chaincode arg order (worst-case temp), all as strings', () => {
+    // representativeTempC sends the max (5), not the mean (3.33).
+    expect(toReadingArgs(summary, 'HASH')).to.deep.equal(['B1', '5', '1700', 'HASH']);
   });
 });
 
 describe('submitVia', () => {
-  it('calls SubmitTemperatureReading with the mapped args', async () => {
+  it('calls the qualified SubmitTemperatureReading with the mapped args', async () => {
     const submitter = recordingSubmitter();
     await submitVia(submitter, summary, 'HASH');
     expect(submitter.calls).to.have.length(1);
-    expect(submitter.calls[0].name).to.equal('SubmitTemperatureReading');
-    expect(submitter.calls[0].args).to.deep.equal(['B1', '3.33', '1700', 'HASH']);
+    expect(submitter.calls[0].name).to.equal('ComplianceContract:SubmitTemperatureReading');
+    expect(submitter.calls[0].args).to.deep.equal(['B1', '5', '1700', 'HASH']);
   });
 });
 
@@ -74,8 +75,8 @@ describe('runOracleCycle', () => {
     expect(store.puts[0].contentType).to.equal('application/json');
     expect(JSON.parse(store.puts[0].payload.toString())).to.deep.equal(readings);
 
-    // Submitted with the storage hash and the aggregated values (mean of 1 and 5 is 3).
-    expect(submitter.calls[0].args).to.deep.equal(['B1', '3', '1700', 'RAWHASH']);
+    // Submitted with the storage hash and the worst-case reading (max of 1 and 5 is 5).
+    expect(submitter.calls[0].args).to.deep.equal(['B1', '5', '1700', 'RAWHASH']);
 
     // Returns the summary it computed.
     expect(result.batchId).to.equal('B1');
