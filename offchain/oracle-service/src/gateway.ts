@@ -1,21 +1,25 @@
 /**
  * Fabric gateway adapter for the oracle — owner: person 3.
  *
- * UNVERIFIED: this needs the test network running and person 4's connection
- * details before it can be validated. It is configured entirely from
- * environment variables so nothing is hard-coded, and it is kept out of the
- * pure logic in ./index (imported lazily) so the unit tests never load
- * fabric-gateway.
+ * Reads the same RoleConfig environment shape person 4's network emits per
+ * identity (network/identities/<name>.env), so the oracle runs straight off
+ * oracle1.env:
  *
- * The oracle identity (ORACLE_CERT / ORACLE_KEY) MUST carry the 'oracle'
- * attribute that coldchain-compliance's assertOracle checks, otherwise every
- * submit is rejected — coordinate the certificate issuance with persons 2 & 4.
+ *   export $(cat network/identities/oracle1.env | xargs)
+ *
+ * That identity MUST carry oracle=true (coldchain-compliance's assertOracle
+ * checks it); person 4's setupDemoIdentities.sh issues oracle1 in Org2 with
+ * that attribute.
+ *
+ * Kept out of the pure logic in ./index (imported lazily) so the unit tests
+ * never load fabric-gateway. UNVERIFIED until the network is up.
  */
 
 import { createPrivateKey } from 'crypto';
-import { readFileSync } from 'fs';
+import { promises as fs } from 'fs';
+import { join } from 'path';
 import * as grpc from '@grpc/grpc-js';
-import { connect, hash, signers } from '@hyperledger/fabric-gateway';
+import { connect, hash, signers, Identity, Signer } from '@hyperledger/fabric-gateway';
 import type { ChaincodeSubmitter } from './index';
 
 const env = (name: string): string => {
@@ -26,32 +30,47 @@ const env = (name: string): string => {
   return value;
 };
 
+/** The MSP layout keeps the cert/key under a generated filename in a directory. */
+const firstFileIn = async (directory: string): Promise<Buffer> => {
+  const files = await fs.readdir(directory);
+  if (files.length === 0) {
+    throw new Error(`no file found in ${directory}`);
+  }
+  return fs.readFile(join(directory, files[0]));
+};
+
 export interface OracleConnection {
   readonly submitter: ChaincodeSubmitter;
   readonly close: () => void;
 }
 
 export const connectOracleSubmitter = async (): Promise<OracleConnection> => {
-  const peerEndpoint = env('ORACLE_PEER_ENDPOINT'); // e.g. localhost:7051
-  const peerHostAlias = env('ORACLE_PEER_HOST_ALIAS'); // e.g. peer0.org1.example.com
-  const mspId = env('ORACLE_MSP_ID'); // e.g. Org1MSP
-  const tlsRootCert = readFileSync(env('ORACLE_TLS_ROOT_CERT'));
-  const certificate = readFileSync(env('ORACLE_CERT'));
-  const privateKeyPem = readFileSync(env('ORACLE_KEY'));
+  const mspId = env('MSP_ID');
+  const peerEndpoint = env('PEER_ENDPOINT');
+  const peerHostAlias = env('PEER_HOST_ALIAS');
   const channelName = process.env.CHANNEL_NAME ?? 'mychannel';
   const chaincodeName = process.env.COMPLIANCE_CHAINCODE ?? 'coldchain-compliance';
 
-  const client = new grpc.Client(
-    peerEndpoint,
-    grpc.credentials.createSsl(tlsRootCert),
-    { 'grpc.ssl_target_name_override': peerHostAlias },
-  );
+  const tlsRootCert = await fs.readFile(env('TLS_CERT_PATH'));
+  const certificate = await firstFileIn(env('CERT_DIRECTORY_PATH'));
+  const privateKeyPem = await firstFileIn(env('KEY_DIRECTORY_PATH'));
+
+  const client = new grpc.Client(peerEndpoint, grpc.credentials.createSsl(tlsRootCert), {
+    'grpc.ssl_target_name_override': peerHostAlias,
+  });
+
+  const identity: Identity = { mspId, credentials: certificate };
+  const signer: Signer = signers.newPrivateKeySigner(createPrivateKey(privateKeyPem));
 
   const gateway = connect({
     client,
-    identity: { mspId, credentials: certificate },
-    signer: signers.newPrivateKeySigner(createPrivateKey(privateKeyPem)),
+    identity,
+    signer,
     hash: hash.sha256,
+    evaluateOptions: () => ({ deadline: Date.now() + 5_000 }),
+    endorseOptions: () => ({ deadline: Date.now() + 15_000 }),
+    submitOptions: () => ({ deadline: Date.now() + 5_000 }),
+    commitStatusOptions: () => ({ deadline: Date.now() + 60_000 }),
   });
 
   const contract = gateway.getNetwork(channelName).getContract(chaincodeName);

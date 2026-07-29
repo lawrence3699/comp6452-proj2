@@ -1,0 +1,19 @@
+{
+  "name": "@offchain/demo",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Demo runners that wire the oracle, storage and indexer to a live Fabric network",
+  "scripts": {
+    "oracle": "ts-node src/run-oracle.ts",
+    "indexer": "ts-node src/run-indexer.ts"
+  },
+  "dependencies": {
+    "@grpc/grpc-js": "^1.14.0",
+    "@hyperledger/fabric-gateway": "^1.12.0"
+  },
+  "devDependencies": {
+    "@types/node": "^18.19.0",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.3.3"
+  }
+}

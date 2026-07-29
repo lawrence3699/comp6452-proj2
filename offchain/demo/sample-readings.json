@@ -1,0 +1,14 @@
+[
+  [
+    { "batchId": "B1", "tempC": 3.5, "observedAt": 1000 },
+    { "batchId": "B1", "tempC": 14.0, "observedAt": 1001 }
+  ],
+  [
+    { "batchId": "B1", "tempC": 12.0, "observedAt": 1010 },
+    { "batchId": "B1", "tempC": 16.0, "observedAt": 1011 }
+  ],
+  [
+    { "batchId": "B1", "tempC": 15.0, "observedAt": 1020 },
+    { "batchId": "B1", "tempC": 15.5, "observedAt": 1021 }
+  ]
+]

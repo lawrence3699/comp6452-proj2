@@ -70,12 +70,14 @@ export const summarise = (readings: readonly Reading[]): Summary => {
 };
 
 /**
- * The chaincode entry point takes a single tempC, so we send the window mean as
- * the representative aggregate. Switch to `summary.maxC` if person 2 wants the
- * worst-case excursion to drive flagging — this is the one line to change
- * (coordination item, see docs/interfaces.md §4).
+ * The chaincode entry point takes a single tempC, so we send the window's
+ * worst-case reading (the maximum) as the representative value. This is the
+ * safety-conservative choice for a cold chain: a brief warm spike inside a
+ * window still drives coldchain-compliance's breach detection, where sending
+ * the mean would average it away. (Frozen chains that can also breach by going
+ * too cold would additionally need minC — out of scope for this PoC.)
  */
-export const representativeTempC = (summary: Summary): number => summary.meanC;
+export const representativeTempC = (summary: Summary): number => summary.maxC;
 
 /** Map a summary + storage hash to the ordered string args the chaincode expects. */
 export const toReadingArgs = (summary: Summary, rawDataHash: string): string[] => [
@@ -102,7 +104,7 @@ export const submitVia = async (
   rawDataHash: string,
 ): Promise<void> => {
   await submitter.submitTransaction(
-    'SubmitTemperatureReading',
+    'ComplianceContract:SubmitTemperatureReading',
     ...toReadingArgs(summary, rawDataHash),
   );
 };
