@@ -25,6 +25,11 @@ describe('temperature thresholds', () => {
     expect(isBreach(' ChIlLeD ', 3)).to.equal(false);
   });
 
+  it('applies the chilled 0C to 4C profile to pasteurised milk', () => {
+    expect(isBreach('pasteurised-milk', 3)).to.equal(false);
+    expect(isBreach('pasteurised-milk', 8)).to.equal(true);
+  });
+
   it('falls back to the ambient range for an unknown food type', () => {
     expect(rangeFor('something-new')).to.deep.equal(DEFAULT_RANGE);
   });

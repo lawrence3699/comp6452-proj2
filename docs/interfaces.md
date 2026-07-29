@@ -17,7 +17,7 @@ export enum BatchStatus {
 
 export interface Batch {
   batchId: string;
-  foodType: string;
+  foodType: string;          // concrete product; demo uses "pasteurised-milk"
   producedAt: number;      // unix seconds
   shelfLifeDays: number;
   origin: string;

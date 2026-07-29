@@ -19,6 +19,13 @@ const RANGES: Readonly<
     maxC: 4,
   },
 
+  // The PoC domain is pasteurised milk. Keep `chilled` as the reusable
+  // storage profile while accepting the concrete product name on the wire.
+  'pasteurised-milk': {
+    minC: 0,
+    maxC: 4,
+  },
+
   ambient: {
     minC: 5,
     maxC: 25,

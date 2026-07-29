@@ -68,7 +68,7 @@ To run a client as, say, the producer:
 
 ```bash
 export $(cat network/identities/producer1.env | xargs)
-cd application && npm run producer -- B1 chilled 14 "Farm A" 500
+cd application && npm run producer -- B1 pasteurised-milk 14 "Dairy A" 500
 ```
 
 To register a different identity or role, call `registerIdentity.sh`
