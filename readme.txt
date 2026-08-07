@@ -3,9 +3,9 @@ Fresh food supply chain traceability on Hyperledger Fabric
 
 TEAM
   Yan, Chaoliang  (z5643222)   batch-registry chaincode, private data collection
-  Huang, Neier    (z5400040)   coldchain-compliance chaincode
-  Hu, Zhaoheng    (z5357529)   off-chain oracle, storage, event indexer
-  Lin, Chi-Hsien  (z5620437)   Fabric network, client applications, integration
+  Hu, Zhaoheng    (z5357529)   coldchain-compliance chaincode
+  Lin, Chi-Hsien  (z5620437)   off-chain oracle, storage, event indexer
+  Huang, Neier    (z5400040)   Fabric network, client applications, integration
 
 
 1. DEPENDENCIES
