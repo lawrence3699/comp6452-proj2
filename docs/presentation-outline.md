@@ -14,9 +14,9 @@ Hyperledger Fabric proof of concept · COMP6452 26T2 · Team of 4
 | Member | zID | Responsibility |
 |---|---|---|
 | Yan, Chaoliang | z5643222 | `batch-registry` chaincode — state machine, ABAC roles, private data |
-| Huang, Neier | z5400040 | `coldchain-compliance` chaincode — breach logic, recall cascade |
-| **Hu, Zhaoheng** | z5357529 | **Off-chain oracle, storage adapter, event indexer** |
-| Lin, Chi-Hsien | z5620437 | Fabric network, role clients, integration tests |
+| Hu, Zhaoheng | z5357529 | `coldchain-compliance` chaincode — breach logic, recall cascade |
+| **Lin, Chi-Hsien** | z5620437 | **Off-chain oracle, storage adapter, event indexer** |
+| Huang, Neier | z5400040 | Fabric network, role clients, integration tests |
 
 > Say this up front (marking requires it). Everyone wrote chaincode / oracle /
 > tests.

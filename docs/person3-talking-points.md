@@ -1,10 +1,10 @@
-# Person 3 (Hu, Zhaoheng) — presentation talking points
+# Person 3 (Lin, Chi-Hsien) — presentation talking points
 
 Your part = the off-chain layer: **oracle-service, storage, indexer**.
 Deliver the English lines; the Chinese notes are for you.
 
 ## 1. Intro — "who did what" (one line, ~10s)
-> "I'm Zhaoheng. I built the **off-chain layer** — the oracle, the off-chain
+> "I'm Chi-Hsien. I built the **off-chain layer** — the oracle, the off-chain
 > storage adapter, and the event indexer — which cover the off-chain
 > computation, off-chain storage and oracle requirements."
 

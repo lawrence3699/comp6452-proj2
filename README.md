@@ -8,9 +8,9 @@ built on Hyperledger Fabric.
 | | Member | zID | Area |
 |---|---|---|---|
 | Person 1 | Yan, Chaoliang | z5643222 | `batch-registry` chaincode, private data collection |
-| Person 2 | Huang, Neier | z5400040 | `coldchain-compliance` chaincode |
-| Person 3 | Hu, Zhaoheng | z5357529 | Off-chain oracle, storage, event indexer |
-| Person 4 | Lin, Chi-Hsien | z5620437 | Fabric network, client applications, integration tests |
+| Person 2 | Hu, Zhaoheng | z5357529 | `coldchain-compliance` chaincode |
+| Person 3 | Lin, Chi-Hsien | z5620437 | Off-chain oracle, storage, event indexer |
+| Person 4 | Huang, Neier | z5400040 | Fabric network, client applications, integration tests |
 
 ## Layout
 

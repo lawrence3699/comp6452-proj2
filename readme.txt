@@ -2,14 +2,14 @@ COMP6452 26T2 Project 2 Task 3
 Fresh food supply chain traceability on Hyperledger Fabric
 
 TEAM
-  Yan, Chaoliang  (z5643222)
-  Huang, Neier    (z5400040)
-  Hu, Zhaoheng    (z5357529)
-  Lin, Chi-Hsien  (z5620437)
-
-TODO before submission: fill in every section below and verify the
-instructions by unpacking this archive into an empty directory and following
-them from scratch.
+  Person 1  Yan, Chaoliang  (z5643222)  batch-registry chaincode - state
+                                        machine, ABAC roles, private data
+  Person 2  Hu, Zhaoheng    (z5357529)  coldchain-compliance chaincode -
+                                        breach counter, FlagBatch, BFS recall
+  Person 3  Lin, Chi-Hsien  (z5620437)  off-chain layer - oracle aggregation,
+                                        storage integrity, event indexer
+  Person 4  Huang, Neier    (z5400040)  Fabric network, client applications,
+                                        identities, integration tests
 
 1. DEPENDENCIES
    - Docker Engine 24 or later (Docker Desktop 4.30+). The Fabric 2.5.16 peer
