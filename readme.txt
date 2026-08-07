@@ -12,7 +12,7 @@ TEAM
                                         identities, integration tests
 
 1. DEPENDENCIES
-   - Docker Engine 24 or later (Docker Desktop 4.30+). The Fabric 2.5.16 peer
+   - Docker Engine 24 or later (Docker Desktop 4.30+). The Fabric 2.5.x peer
      image needs a recent Docker API to build chaincode; Docker 20.10 /
      Desktop 4.17 is too old and chaincode install fails with
      "client version ... is too new. Maximum supported API version is 1.41".

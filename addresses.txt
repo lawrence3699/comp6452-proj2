@@ -13,7 +13,12 @@ hosts two contracts, so every client call in this project is qualified, e.g.
 
     contract.evaluateTransaction('BatchQueryContract:GetBatchHistory', batchId)
 
-Platform : Hyperledger Fabric 2.5.16
+Everything below was read back from the running network, not from the source:
+  peer lifecycle chaincode querycommitted --channelID mychannel
+  peer lifecycle chaincode queryapproved  --channelID mychannel --name <name>
+  peer version
+
+Platform : Hyperledger Fabric, peer v2.5.13
 Network  : fabric-samples test-network, CA-based (Org1MSP, Org2MSP, orderer)
 Channel  : mychannel
 
@@ -21,10 +26,13 @@ Three contracts are deployed, in two chaincode packages.
 
 
 CHAINCODE PACKAGE 1 — batch-registry
-  Package ID          : batch-registry_1:a34c12a70fbd9c5a7e8d21c2f43492e29971d6860ebf1166ca4bf4fc8c954e5e
-  Version             : 1
-  Sequence            : 1
-  Endorsement policy  : channel default (majority of Org1MSP, Org2MSP)
+  Package ID          : batch-registry_1.0:ba5124188c88668bf8032315c010d2519c2cd2038a04b5511743977ceba974b7
+  Version             : 1.0
+  Sequence            : 4
+  Approved by         : Org1MSP, Org2MSP  (both true; installed package
+                        identical on both peers)
+  Endorsement policy  : channel default — /Channel/Application/Endorsement
+                        (majority of Org1MSP, Org2MSP)
   Private collection  : batchPrivateDetails (see below)
 
   Contract 1/3: BatchRegistryContract          source: src/batchRegistry.ts
@@ -39,10 +47,12 @@ CHAINCODE PACKAGE 1 — batch-registry
 
 
 CHAINCODE PACKAGE 2 — coldchain-compliance
-  Package ID          : coldchain-compliance_1:d784528d2cd8a980dfa0b5b2293a5a6fd856797bcfbc1376f42e3465ff1b5bd5
-  Version             : 1
-  Sequence            : 1
-  Endorsement policy  : channel default (majority of Org1MSP, Org2MSP)
+  Package ID          : coldchain-compliance_1.0:e7cd27dc683efd1afdd003004681bdfd0f8fd107c92f3dd9e67bc9cdfee62cb1
+  Version             : 1.0
+  Sequence            : 4
+  Approved by         : Org1MSP, Org2MSP
+  Endorsement policy  : channel default — /Channel/Application/Endorsement
+                        (majority of Org1MSP, Org2MSP)
   Private collection  : none
 
   Contract 3/3: ComplianceContract             source: src/compliance.ts
@@ -51,14 +61,25 @@ CHAINCODE PACKAGE 2 — coldchain-compliance
 
 
 PRIVATE DATA COLLECTION — batchPrivateDetails
-  Members  : Org1MSP, Org2MSP  (OR('Org1MSP.member','Org2MSP.member'))
-  Attached at commit of batch-registry via
-    --collections-config network/collections_config.json
+  Committed with batch-registry, sequence 4.
+  Members : Org1MSP, Org2MSP  (OR('Org1MSP.member','Org2MSP.member'))
+  Source  : network/collections_config.json, passed to the commit with
+            --collections-config
 
 
-Note: package IDs are content hashes of the installed package and will change
-if the chaincode source or its build output changes. The two IDs above were
-recorded from the deployment of the chaincode source in this archive. Read the
-current IDs on a live network with:
+NOTES
+
+Sequence 4 because the two chaincodes were upgraded three times during
+development; sequence 4 is the definition currently committed on mychannel.
+
+A package ID is a content hash of the installed package, so it changes whenever
+the chaincode source or its build output changes. Redeploying this archive with
+network/scripts/deployAll.sh installs the same three contracts but labels them
+batch-registry_1 / coldchain-compliance_1 at version 1, sequence 1, and will
+produce package IDs different from the two above. That is expected: the IDs
+recorded here identify the deployment this submission was demonstrated on.
+
+To read the current values on any live network:
     peer lifecycle chaincode queryinstalled
-The deploy script also prints the ID it committed, on its last line.
+    peer lifecycle chaincode querycommitted --channelID mychannel
+deployChaincode.sh also prints the package ID it committed, on its last line.
