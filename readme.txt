@@ -3,9 +3,9 @@ Fresh food supply chain traceability on Hyperledger Fabric
 
 TEAM
   Yan, Chaoliang  (z5643222)   batch-registry chaincode, private data collection
-  Hu, Zhaoheng    (z5357529)   coldchain-compliance chaincode
-  Lin, Chi-Hsien  (z5620437)   off-chain oracle, storage, event indexer
-  Huang, Neier    (z5400040)   Fabric network, client applications, integration
+  Hu, Zhaoheng    (z5357529)   coldchain-compliance, breach counter, BFS recall
+  Lin, Chi-Hsien  (z5620437)   off-chain aggregation, storage, gateway split
+  Huang, Neier    (z5400040)   Fabric Gateway, role clients, network, integration
 
 
 1. DEPENDENCIES
@@ -118,10 +118,12 @@ TEAM
        ./demo.sh
 
    Scripted end to end, with no commands typed live. The story it tells: a
-   producer registers a batch, custody moves down the chain, the oracle reports
-   temperatures that breach the cold chain, coldchain-compliance flags the
-   batch automatically through a cross-chaincode call, and the regulator reads
-   the complete history back.
+   producer registers a batch, custody moves down the chain, a second batch
+   walks the clean path to the warehouse and is marked DELIVERED by the
+   warehouse identity, the oracle reports temperatures that breach the cold
+   chain, coldchain-compliance flags the incident batch automatically through
+   a cross-chaincode call, and the regulator reads the complete history back
+   and cascades a recall through the derivation graph.
 
 
 7. RUNNING THE TESTS
@@ -129,15 +131,15 @@ TEAM
    Unit tests. No network required — the chaincode tests run against a stubbed
    ChaincodeStub:
 
-       cd chaincode/batch-registry        && npm install && npm test    # 12
-       cd chaincode/coldchain-compliance  && npm install && npm test    # 12
+       cd chaincode/batch-registry        && npm install && npm test    # 46
+       cd chaincode/coldchain-compliance  && npm install && npm test    # 18
        cd offchain/shared                 && npm install && npm test    # 20
-       cd offchain/storage                && npm install && npm test    # 16
+       cd offchain/storage                && npm install && npm test    # 34
        cd offchain/oracle-service         && npm install && npm test    # 51
-       cd offchain/indexer                && npm install && npm test    # 57
-       cd application                     && npm install && npm test    # 79
+       cd offchain/indexer                && npm install && npm test    # 82
+       cd application                     && npm install && npm test    # 85
 
-                                                             total      247
+                                                             total      336
 
    End-to-end test. Needs the network up, identities registered and both
    chaincodes deployed (sections 3 and 4):
@@ -146,13 +148,17 @@ TEAM
 
    Covers the full required path together with the access-control rejections:
    registration by a producer, rejection of a non-producer, custody transfer,
-   rejection of a non-holder, rejection of a non-oracle reading, three
-   consecutive breaches, the automatic cross-chaincode flag, and the
-   regulator's read of the complete ordered history, plus the private data
-   collection (written via the transient map, absent from the public ledger,
-   readable by a collection member, and its on-chain hash matching a locally
-   computed SHA-256 of the payload) and the recall cascade through the
-   derivation graph, two levels deep. 20 assertions.
+   rejection of a non-holder, warehouse receipt and delivery (the full
+   CREATED -> IN_TRANSIT -> AT_WAREHOUSE -> DELIVERED walk, with a non-holder
+   refused MarkDelivered), rejection of a non-oracle reading, rejection of a
+   malformed rawDataHash, three consecutive breaches, the automatic
+   cross-chaincode flag, and the regulator's read of the complete ordered
+   history, plus the private data collection (written via the transient map,
+   absent from the public ledger, readable by a collection member, and its
+   on-chain hash matching a locally computed SHA-256 of the payload) and the
+   recall cascade through the derivation graph, two levels deep. It then
+   starts the event indexer against the run's own blocks and asserts the
+   delivery and the recall are served back over HTTP. 29 assertions.
 
 
 8. REQUIREMENTS COVERAGE

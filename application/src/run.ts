@@ -1,11 +1,11 @@
 /**
- * Single CLI entry point for all three role clients — owner: person 4.
+ * Single CLI entry point for all four role clients — owner: person 4.
  *
  *   npm run cli -- producer    register --quantity 400
  *   npm run cli -- transporter transfer --batch BATCH-123 --to Org2MSP
  *   npm run cli -- regulator   history  --batch BATCH-123
  *
- * One entry point rather than three binaries: the role is the first argument,
+ * One entry point rather than four binaries: the role is the first argument,
  * which keeps the demo script readable and means a marker has one command to
  * remember. The role still selects a different signing identity, so this is a
  * shared front door, not a shared identity.
@@ -16,6 +16,7 @@ import { describeFailure, isPolicyRejection } from './errors';
 import { runProducer } from './producer';
 import { runRegulator } from './regulator';
 import { runTransporter } from './transporter';
+import { runWarehouse } from './warehouse';
 import { USAGE } from './usage';
 
 type RoleHandler = (parsed: ParsedCommand, print: (line: string) => void) => Promise<void>;
@@ -23,6 +24,7 @@ type RoleHandler = (parsed: ParsedCommand, print: (line: string) => void) => Pro
 export const HANDLERS: Readonly<Record<string, RoleHandler>> = {
   producer: runProducer,
   transporter: runTransporter,
+  warehouse: runWarehouse,
   regulator: runRegulator,
 };
 
@@ -56,6 +58,10 @@ export const contextFor = (parsed: ParsedCommand): string => {
       return 'transfer custody of this batch';
     case 'transporter log':
       return 'log an in-transit event';
+    case 'warehouse deliver':
+      return 'mark this batch as delivered';
+    case 'warehouse show':
+      return 'read this batch';
     case 'regulator flag':
       return 'flag this batch';
     case 'regulator recall':

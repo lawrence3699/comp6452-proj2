@@ -15,7 +15,8 @@
     "producer": "ts-node src/run.ts producer",
     "transporter": "ts-node src/run.ts transporter",
     "regulator": "ts-node src/run.ts regulator",
-    "demo": "./demo.sh"
+    "demo": "./demo.sh",
+    "web": "ts-node src/web.ts"
   },
   "dependencies": {
     "@comp6452/offchain-shared": "file:../offchain/shared",

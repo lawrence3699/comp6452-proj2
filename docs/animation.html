@@ -1,0 +1,249 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="color-scheme" content="dark">
+  <meta name="theme-color" content="#05060a">
+  <title>ColdChain Ledger — Animated Team Walkthrough</title>
+  <meta name="description" content="Full-screen animated walkthrough of the COMP6452 ColdChain Ledger project and team ownership.">
+  <link rel="stylesheet" href="animation.css">
+</head>
+<body>
+  <a class="skip-link" href="#scene-controls">Skip animation</a>
+
+  <div class="reel-app" id="reel-app">
+    <header class="reel-header">
+      <a class="reel-brand" href="showcase.html" aria-label="Open project data dashboard">
+        <span class="reel-brand-mark" aria-hidden="true"><i></i><i></i><i></i></span>
+        <span>ColdChain Ledger</span>
+      </a>
+      <div class="reel-scene-name"><span id="scene-number">01</span><strong id="scene-name">Team</strong></div>
+      <div class="reel-header-actions">
+        <a href="showcase.html">Data view</a>
+        <button type="button" id="fullscreen-button" aria-label="Toggle fullscreen">↗</button>
+      </div>
+    </header>
+
+    <main class="reel-viewport" id="reel-viewport">
+      <div class="reel-track" id="reel-track">
+        <!-- 01: team constellation -->
+        <section class="reel-scene scene-team is-active" data-scene="0" aria-labelledby="scene-team-title">
+          <div class="scene-copy scene-copy-center">
+            <p class="scene-kicker">TEAM OWNERSHIP</p>
+            <h1 id="scene-team-title">Four owners.<br><span>One transaction.</span></h1>
+          </div>
+
+          <div class="constellation" aria-label="Four project owners connected to one working system">
+            <div class="constellation-ring ring-one" aria-hidden="true"></div>
+            <div class="constellation-ring ring-two" aria-hidden="true"></div>
+            <div class="constellation-core"><small>PROJECT</small><strong>LIVE</strong><span>✓</span></div>
+
+            <article class="constellation-person person-yan">
+              <span class="person-avatar">CY</span>
+              <div><small>Yan, Chaoliang</small><strong>Registry</strong></div>
+            </article>
+            <article class="constellation-person person-hu">
+              <span class="person-avatar">ZH</span>
+              <div><small>Hu, Zhaoheng</small><strong>Compliance</strong></div>
+            </article>
+            <article class="constellation-person person-lin">
+              <span class="person-avatar">CL</span>
+              <div><small>Lin, Chi-Hsien</small><strong>Off-chain</strong></div>
+            </article>
+            <article class="constellation-person person-huang">
+              <span class="person-avatar">NH</span>
+              <div><small>Huang, Neier</small><strong>Clients + network</strong></div>
+            </article>
+          </div>
+
+          <div class="scene-footnote">People → components → shared result</div>
+        </section>
+
+        <!-- 02: Yan / registry -->
+        <section class="reel-scene scene-registry" data-scene="1" aria-labelledby="scene-registry-title" aria-hidden="true">
+          <div class="scene-person-heading owner-yan">
+            <span class="large-avatar">CY</span>
+            <div><p>YAN, CHAOLIANG</p><h2 id="scene-registry-title">batch-registry</h2></div>
+          </div>
+
+          <div class="registry-visual scene-visual">
+            <div class="state-machine-animation">
+              <p class="visual-label">STATE MACHINE</p>
+              <div class="state-track"><span class="state-progress"></span><i class="state-token"></i></div>
+              <div class="state-labels"><span>CREATED</span><span>IN_TRANSIT</span><span>WAREHOUSE</span><span>DELIVERED</span></div>
+            </div>
+
+            <div class="registry-lower-grid">
+              <article class="abac-animation">
+                <p class="visual-label">ABAC</p>
+                <div class="identity-chip"><i>CA</i><span>producer</span></div>
+                <div class="shield-gate"><span>✓</span></div>
+                <div class="transaction-chip">RegisterBatch</div>
+              </article>
+              <article class="vault-animation">
+                <p class="visual-label">PRIVATE DATA</p>
+                <div class="vault-door"><span>price</span><span>notes</span><i>••••</i></div>
+                <div class="public-ledger-row"><span>public ledger</span><code>hash only</code></div>
+              </article>
+            </div>
+          </div>
+
+          <div class="keyword-strip owner-yan"><span>transitions</span><span>role check</span><span>private collection</span></div>
+        </section>
+
+        <!-- 03: Hu / compliance -->
+        <section class="reel-scene scene-compliance" data-scene="2" aria-labelledby="scene-compliance-title" aria-hidden="true">
+          <div class="scene-person-heading owner-hu">
+            <span class="large-avatar">ZH</span>
+            <div><p>HU, ZHAOHENG</p><h2 id="scene-compliance-title">coldchain-compliance</h2></div>
+          </div>
+
+          <div class="compliance-visual scene-visual">
+            <article class="breach-counter-animation">
+              <p class="visual-label">CONSECUTIVE BREACHES</p>
+              <div class="temperature-windows"><i class="safe"></i><i></i><i></i><i></i></div>
+              <div class="counter-orbit"><span>3</span><small>/ 3</small></div>
+            </article>
+
+            <article class="cross-call-animation">
+              <div class="mini-contract compliance-contract">Compliance</div>
+              <div class="cross-call-line"><i></i><span>FlagBatch()</span></div>
+              <div class="mini-contract registry-contract">Registry</div>
+            </article>
+
+            <article class="bfs-animation">
+              <p class="visual-label">CYCLE-SAFE BFS RECALL</p>
+              <div class="bfs-tree">
+                <span class="tree-node root-node">P</span>
+                <i class="tree-edge edge-a"></i><i class="tree-edge edge-b"></i>
+                <span class="tree-node child-a">C1</span><span class="tree-node child-b">C2</span>
+                <i class="tree-edge edge-c"></i>
+                <span class="tree-node grandchild">PK</span>
+              </div>
+              <div class="visited-set">visited { P, C1, C2, PK }</div>
+            </article>
+          </div>
+
+          <div class="keyword-strip owner-hu"><span>1 → 2 → 3</span><span>cross-chaincode</span><span>BFS + visited</span></div>
+        </section>
+
+        <!-- 04: Lin / off-chain -->
+        <section class="reel-scene scene-offchain" data-scene="3" aria-labelledby="scene-offchain-title" aria-hidden="true">
+          <div class="scene-person-heading owner-lin">
+            <span class="large-avatar">CL</span>
+            <div><p>LIN, CHI-HSIEN</p><h2 id="scene-offchain-title">off-chain services</h2></div>
+          </div>
+
+          <div class="offchain-visual scene-visual">
+            <div class="aggregation-pipeline">
+              <p class="visual-label">PURE AGGREGATION</p>
+              <div class="sensor-cloud"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+              <div class="pipeline-arrow"></div>
+              <div class="summarise-node"><code>summarise()</code><strong>8.98°C</strong></div>
+            </div>
+
+            <div class="integrity-pipeline">
+              <p class="visual-label">TAMPER DETECTION</p>
+              <div class="file-card"><span>raw-series.json</span><code>a6e6…b5b9</code></div>
+              <div class="rehash-node">#</div>
+              <div class="match-card"><span>RE-HASH</span><strong>MATCH ✓</strong></div>
+            </div>
+
+            <div class="logic-split-animation">
+              <p class="visual-label">TESTABLE SPLIT</p>
+              <div class="split-source">service</div>
+              <div class="split-lines"><i></i><i></i></div>
+              <div class="split-target pure-target"><strong>pure logic</strong><small>unit tests</small></div>
+              <div class="split-target gateway-target"><strong>gateway.ts</strong><small>network edge</small></div>
+            </div>
+          </div>
+
+          <div class="keyword-strip owner-lin"><span>summarise()</span><span>re-hash on read</span><span>network-free tests</span></div>
+        </section>
+
+        <!-- 05: Huang / client + network -->
+        <section class="reel-scene scene-network" data-scene="4" aria-labelledby="scene-network-title" aria-hidden="true">
+          <div class="scene-person-heading owner-huang">
+            <span class="large-avatar">NH</span>
+            <div><p>HUANG, NEIER</p><h2 id="scene-network-title">clients + network</h2></div>
+          </div>
+
+          <div class="network-visual scene-visual">
+            <div class="identity-animation">
+              <p class="visual-label">FABRIC GATEWAY IDENTITIES</p>
+              <div class="role-stack">
+                <span><i>P</i>producer1</span><span><i>T</i>transporter1</span><span><i>R</i>regulator1</span>
+              </div>
+              <div class="identity-wires"><i></i><i></i><i></i></div>
+              <div class="connect-node"><code>connect.ts</code><span>sign</span></div>
+            </div>
+
+            <div class="cli-animation">
+              <p class="visual-label">ROLE CLIENTS</p>
+              <div class="terminal-stack"><code>$ producer register</code><code>$ transporter transfer</code><code>$ regulator recall</code></div>
+            </div>
+
+            <div class="lifecycle-animation">
+              <p class="visual-label">TEST-NETWORK LIFECYCLE</p>
+              <div class="container-row"><span>Org1</span><span>Orderer</span><span>Org2</span></div>
+              <div class="channel-line"><i></i><strong>mychannel</strong></div>
+              <div class="lifecycle-steps"><span>UP</span><span>IDENTITY</span><span>DEPLOY</span></div>
+            </div>
+          </div>
+
+          <div class="keyword-strip owner-huang"><span>identity wiring</span><span>role CLIs</span><span>lifecycle scripts</span></div>
+        </section>
+
+        <!-- 06: full system -->
+        <section class="reel-scene scene-integration" data-scene="5" aria-labelledby="scene-integration-title" aria-hidden="true">
+          <div class="scene-copy scene-copy-center integration-copy">
+            <p class="scene-kicker">INTEGRATION</p>
+            <h2 id="scene-integration-title">Four workstreams.<br><span>One live flow.</span></h2>
+          </div>
+
+          <div class="integration-network" aria-label="Animated end-to-end transaction flow">
+            <article class="integration-node int-client"><small>Huang</small><strong>Clients</strong></article>
+            <article class="integration-node int-registry"><small>Yan</small><strong>Registry</strong></article>
+            <article class="integration-node int-offchain"><small>Lin</small><strong>Off-chain</strong></article>
+            <article class="integration-node int-compliance"><small>Hu</small><strong>Compliance</strong></article>
+            <div class="integration-core"><small>BATCH</small><strong>RECALLED</strong><span>✓</span></div>
+            <i class="integration-wire wire-client"></i><i class="integration-wire wire-registry"></i><i class="integration-wire wire-offchain"></i><i class="integration-wire wire-compliance"></i>
+            <b class="integration-packet packet-one"></b><b class="integration-packet packet-two"></b><b class="integration-packet packet-three"></b><b class="integration-packet packet-four"></b>
+          </div>
+
+          <div class="integration-flow-labels"><span>sign</span><span>register</span><span>aggregate</span><span>flag</span><span>recall</span></div>
+        </section>
+
+        <!-- 07: evidence -->
+        <section class="reel-scene scene-proof" data-scene="6" aria-labelledby="scene-proof-title" aria-hidden="true">
+          <div class="proof-stage">
+            <div class="proof-total"><span id="proof-counter">336</span><small>UNIT TESTS</small></div>
+            <div class="proof-bars" aria-label="Tests across seven packages">
+              <i style="--h:54%"></i><i style="--h:22%"></i><i style="--h:24%"></i><i style="--h:40%"></i><i style="--h:60%"></i><i style="--h:96%"></i><i style="--h:100%"></i>
+            </div>
+            <div class="proof-secondary"><article><strong>29 / 29</strong><span>FABRIC E2E</span></article><article><strong>7 / 7</strong><span>PACKAGES</span></article><article><strong>✓</strong><span>CI ON PR</span></article></div>
+          </div>
+
+          <div class="scene-copy scene-copy-center proof-copy">
+            <p class="scene-kicker">VERIFIED</p>
+            <h2 id="scene-proof-title">Ready for the live demo.</h2>
+          </div>
+        </section>
+      </div>
+    </main>
+
+    <footer class="reel-controls" id="scene-controls">
+      <div class="scene-tabs" id="scene-tabs" aria-label="Animation scenes"></div>
+      <div class="scene-timeline"><span id="scene-timeline-progress"></span></div>
+      <div class="transport-controls">
+        <button type="button" id="previous-scene" aria-label="Previous scene">‹</button>
+        <button type="button" id="play-scene" aria-label="Pause animation"><span aria-hidden="true">Ⅱ</span><strong>Pause</strong></button>
+        <button type="button" id="next-scene" aria-label="Next scene">›</button>
+      </div>
+    </footer>
+  </div>
+
+  <script src="animation.js"></script>
+</body>
+</html>

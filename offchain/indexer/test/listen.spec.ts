@@ -1,7 +1,7 @@
 import { expect } from 'chai';
 import { ChaincodeEvent, Checkpointer } from '@hyperledger/fabric-gateway';
 import { RawChaincodeEvent } from '../src/events';
-import { consumeEvents } from '../src/listen';
+import { checkpointFile, consumeEvents, defaultCheckpointFile } from '../src/listen';
 import { MemoryEventStore } from '../src/store';
 
 /**
@@ -62,6 +62,51 @@ class RecordingCheckpointer implements Checkpointer {
     await this.checkpointTransaction(event.blockNumber, event.transactionId);
   };
 }
+
+describe('checkpoint file resolution', () => {
+  const REGISTRY = 'batch-registry';
+  const COMPLIANCE = 'coldchain-compliance';
+  let savedEnv: string | undefined;
+
+  beforeEach(() => {
+    savedEnv = process.env.INDEXER_CHECKPOINT_FILE;
+    delete process.env.INDEXER_CHECKPOINT_FILE;
+  });
+
+  afterEach(() => {
+    if (savedEnv === undefined) {
+      delete process.env.INDEXER_CHECKPOINT_FILE;
+    } else {
+      process.env.INDEXER_CHECKPOINT_FILE = savedEnv;
+    }
+  });
+
+  it('derives a distinct default per chaincode so two streams never share state', () => {
+    const registry = checkpointFile(REGISTRY, REGISTRY);
+    const compliance = checkpointFile(COMPLIANCE, REGISTRY);
+
+    expect(registry).to.not.equal(compliance);
+    expect(registry).to.equal(defaultCheckpointFile(REGISTRY));
+    expect(compliance).to.equal(defaultCheckpointFile(COMPLIANCE));
+    expect(registry).to.match(/checkpoint-batch-registry\.json$/);
+    expect(compliance).to.match(/checkpoint-coldchain-compliance\.json$/);
+  });
+
+  it('lets INDEXER_CHECKPOINT_FILE override the registry stream only (back-compat)', () => {
+    process.env.INDEXER_CHECKPOINT_FILE = '/tmp/registry-checkpoint.json';
+
+    expect(checkpointFile(REGISTRY, REGISTRY)).to.equal('/tmp/registry-checkpoint.json');
+    // Honouring the env var for the compliance stream would recreate the
+    // shared-file hazard the per-chaincode default exists to prevent.
+    expect(checkpointFile(COMPLIANCE, REGISTRY)).to.equal(defaultCheckpointFile(COMPLIANCE));
+  });
+
+  it('ignores an empty INDEXER_CHECKPOINT_FILE', () => {
+    process.env.INDEXER_CHECKPOINT_FILE = '';
+
+    expect(checkpointFile(REGISTRY, REGISTRY)).to.equal(defaultCheckpointFile(REGISTRY));
+  });
+});
 
 describe('event consumption', () => {
   it('indexes every well-formed event and checkpoints each one', async () => {

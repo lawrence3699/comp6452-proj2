@@ -13,11 +13,21 @@
  */
 
 /**
- * The three events frozen in docs/interfaces.md. Declared as a const tuple so
- * `isEventName` and the type stay in sync — adding a fourth event means
- * touching exactly one line.
+ * The seven events frozen in docs/interfaces.md — five from `batch-registry`
+ * (BatchRegistered, CustodyTransferred, BatchFlagged, BatchDelivered,
+ * BatchRecalled) and two from `coldchain-compliance` (ComplianceBreach,
+ * RecallCascaded). Declared as a const tuple so `isEventName` and the type
+ * stay in sync — adding an eighth event means touching exactly one line.
  */
-export const EVENT_NAMES = ['BatchRegistered', 'CustodyTransferred', 'BatchFlagged'] as const;
+export const EVENT_NAMES = [
+  'BatchRegistered',
+  'CustodyTransferred',
+  'BatchFlagged',
+  'BatchDelivered',
+  'BatchRecalled',
+  'ComplianceBreach',
+  'RecallCascaded',
+] as const;
 
 export type EventName = (typeof EVENT_NAMES)[number];
 
@@ -60,10 +70,51 @@ export interface BatchFlaggedPayload {
   readonly timestamp: number;
 }
 
+export interface BatchDeliveredPayload {
+  readonly batchId: string;
+  /** MSP that completed the delivery — the holder at the moment of MarkDelivered. */
+  readonly holder: string;
+  readonly timestamp: number;
+}
+
+export interface BatchRecalledPayload {
+  readonly batchId: string;
+  readonly timestamp: number;
+}
+
+export interface ComplianceBreachPayload {
+  readonly batchId: string;
+  /** Consecutive violations that tripped the threshold — chaincode-counted. */
+  readonly consecutive: number;
+  /** The reading that completed the streak, in degrees Celsius. */
+  readonly tempC: number;
+  readonly rawDataHash: string;
+  readonly timestamp: number;
+}
+
+/**
+ * The wire payload is `{root, recalled, timestamp}`. `batchId` is set to
+ * `root` at decode time so the store's per-batch index files the cascade under
+ * the ROOT batch's history. Fabric commits only the outermost chaincode's
+ * events — the `BatchRecalled` that batch-registry sets under invokeChaincode
+ * is dropped — so this event is the cascade's entire off-chain footprint, and
+ * `recalled` (the blast radius) is deliberately preserved verbatim.
+ */
+export interface RecallCascadedPayload {
+  readonly batchId: string;
+  /** Every batch id the cascade recalled (the root plus its derived closure). */
+  readonly recalled: readonly string[];
+  readonly timestamp: number;
+}
+
 export type EventPayload =
   | ({ readonly eventName: 'BatchRegistered' } & BatchRegisteredPayload)
   | ({ readonly eventName: 'CustodyTransferred' } & CustodyTransferredPayload)
-  | ({ readonly eventName: 'BatchFlagged' } & BatchFlaggedPayload);
+  | ({ readonly eventName: 'BatchFlagged' } & BatchFlaggedPayload)
+  | ({ readonly eventName: 'BatchDelivered' } & BatchDeliveredPayload)
+  | ({ readonly eventName: 'BatchRecalled' } & BatchRecalledPayload)
+  | ({ readonly eventName: 'ComplianceBreach' } & ComplianceBreachPayload)
+  | ({ readonly eventName: 'RecallCascaded' } & RecallCascadedPayload);
 
 /**
  * One decoded, ledger-anchored event as it is written to the JSONL store.
@@ -185,6 +236,50 @@ const requiredTimestamp = (record: Record<string, unknown>, field: string): numb
   return Math.trunc(value);
 };
 
+/**
+ * Numbers are validated, not cast, for the same reason strings are: the
+ * payload is whatever bytes a contract handed to `SetEvent`. `NaN` and the
+ * infinities are real JSON.parse survivors (`"NaN"` is not, but `1e999`
+ * parses to Infinity) and both would poison every consumer that does
+ * arithmetic on the value.
+ */
+const requiredFiniteNumber = (record: Record<string, unknown>, field: string): number => {
+  const value = record[field];
+  if (typeof value !== 'number') {
+    throw new EventDecodeError(`field "${field}" must be a number, got ${typeof value}`);
+  }
+  if (!Number.isFinite(value)) {
+    throw new EventDecodeError(`field "${field}" is not a finite number: ${String(value)}`);
+  }
+  return value;
+};
+
+/**
+ * An array of non-empty strings. An empty batch id inside `recalled` would
+ * later be served as a real batch — the same blank-value hole
+ * `requiredString` closes for scalar fields.
+ */
+const requiredStringArray = (
+  record: Record<string, unknown>,
+  field: string,
+): readonly string[] => {
+  const value = record[field];
+  if (!Array.isArray(value)) {
+    throw new EventDecodeError(`field "${field}" must be an array, got ${typeof value}`);
+  }
+  return value.map((entry: unknown, index: number): string => {
+    if (typeof entry !== 'string') {
+      throw new EventDecodeError(
+        `field "${field}"[${String(index)}] must be a string, got ${typeof entry}`,
+      );
+    }
+    if (entry === '') {
+      throw new EventDecodeError(`field "${field}"[${String(index)}] must not be empty`);
+    }
+    return entry;
+  });
+};
+
 const decodePayload = (eventName: EventName, record: Record<string, unknown>): EventPayload => {
   switch (eventName) {
     case 'BatchRegistered':
@@ -208,6 +303,37 @@ const decodePayload = (eventName: EventName, record: Record<string, unknown>): E
         batchId: requiredString(record, 'batchId'),
         reason: requiredString(record, 'reason'),
         evidenceHash: requiredString(record, 'evidenceHash'),
+        timestamp: requiredTimestamp(record, 'timestamp'),
+      };
+    case 'BatchDelivered':
+      return {
+        eventName,
+        batchId: requiredString(record, 'batchId'),
+        holder: requiredString(record, 'holder'),
+        timestamp: requiredTimestamp(record, 'timestamp'),
+      };
+    case 'BatchRecalled':
+      return {
+        eventName,
+        batchId: requiredString(record, 'batchId'),
+        timestamp: requiredTimestamp(record, 'timestamp'),
+      };
+    case 'ComplianceBreach':
+      return {
+        eventName,
+        batchId: requiredString(record, 'batchId'),
+        consecutive: requiredFiniteNumber(record, 'consecutive'),
+        tempC: requiredFiniteNumber(record, 'tempC'),
+        rawDataHash: requiredString(record, 'rawDataHash'),
+        timestamp: requiredTimestamp(record, 'timestamp'),
+      };
+    case 'RecallCascaded':
+      // The wire field is `root`; it becomes `batchId` so the store's
+      // per-batch index needs no special case — see RecallCascadedPayload.
+      return {
+        eventName,
+        batchId: requiredString(record, 'root'),
+        recalled: requiredStringArray(record, 'recalled'),
         timestamp: requiredTimestamp(record, 'timestamp'),
       };
   }

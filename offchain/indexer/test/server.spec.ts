@@ -107,6 +107,24 @@ describe('read API', () => {
     expect(Number(header)).to.be.a('number').and.to.be.lessThan(50);
   });
 
+  it('allows any origin on every response, so the file:// showcase page can fetch', async () => {
+    // Success, 404 and 405 all go through sendJson; the dashboard needs the
+    // header on errors too or a failed fetch is unreadable from file://.
+    for (const [path, init] of [
+      ['/health', undefined],
+      ['/batch/BATCH-1/history', undefined],
+      ['/batch/NOPE/history', undefined],
+      ['/nope', undefined],
+      ['/health', { method: 'POST' }],
+    ] as const) {
+      const response = await fetch(`${base}${path}`, init);
+      expect(
+        response.headers.get('access-control-allow-origin'),
+        `${init?.method ?? 'GET'} ${path}`,
+      ).to.equal('*');
+    }
+  });
+
   it('404s an unknown batch rather than returning an empty history as success', async () => {
     const response = await fetch(`${base}/batch/NOPE/history`);
     const body = (await response.json()) as BatchHistory;

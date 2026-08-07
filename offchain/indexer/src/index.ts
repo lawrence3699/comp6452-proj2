@@ -1,9 +1,11 @@
 /**
  * Chaincode event indexer — owner: person 3.
  *
- * Consumes BatchRegistered, CustodyTransferred and BatchFlagged, persists them
- * to an append-only JSONL store, and serves the fast traceability queries
- * behind FR2 and NFR1.
+ * Consumes all seven chaincode events — BatchRegistered, CustodyTransferred,
+ * BatchFlagged, BatchDelivered and BatchRecalled from `batch-registry`,
+ * ComplianceBreach and RecallCascaded from `coldchain-compliance` — persists
+ * them to an append-only JSONL store, and serves the fast traceability
+ * queries behind FR2 and NFR1.
  *
  * Five modules, split so only two of them need anything outside the process:
  *   events.ts   defensive decoding of a raw chaincode event   (pure)
@@ -14,8 +16,11 @@
  */
 
 export {
+  BatchDeliveredPayload,
   BatchFlaggedPayload,
+  BatchRecalledPayload,
   BatchRegisteredPayload,
+  ComplianceBreachPayload,
   CustodyTransferredPayload,
   EVENT_NAMES,
   EventDecodeError,
@@ -23,6 +28,7 @@ export {
   EventPayload,
   IndexedEvent,
   RawChaincodeEvent,
+  RecallCascadedPayload,
   decodeEvent,
   eventKey,
   isEventName,
@@ -39,14 +45,21 @@ export {
   storeFile,
 } from './store';
 
-export { BatchHistory, CustodyStep, FlagRecord, assembleHistory } from './history';
+export {
+  BatchHistory,
+  BreachRecord,
+  CustodyStep,
+  FlagRecord,
+  RecallCascade,
+  assembleHistory,
+} from './history';
 
 export {
-  DEFAULT_CHECKPOINT_FILE,
   ListenOptions,
   ListenResult,
   checkpointFile,
   consumeEvents,
+  defaultCheckpointFile,
   listen,
 } from './listen';
 

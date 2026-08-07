@@ -11,16 +11,21 @@
 #      inspection report anchored off chain;
 #   2. a transporter — a different identity — is refused when it tries to
 #      register one, which is the access control being demonstrated, not a bug;
-#   3. custody moves to Org2MSP and an in-transit event is logged off chain;
-#   4. a non-holder is refused a transfer;
+#   3. custody moves to Org2MSP, an in-transit event is logged off chain, and
+#      a non-holder is refused a transfer;
+#   4. the clean path: a SIDE batch is walked to the warehouse and marked
+#      DELIVERED by the warehouse identity — the terminus the incident batch
+#      never reaches;
 #   5. the oracle submits temperature summaries; the cold chain is breached
 #      three windows running and the batch is flagged AUTOMATICALLY by
 #      chaincode-to-chaincode call, with no human involved;
-#   6. the regulator reads the whole trail back and recalls the batch.
+#   6. the regulator reads the whole trail back and recalls the batch;
+#   7. one recall cascades through the derivation graph.
 #
 # Usage:
 #   ./demo.sh              full demo against the live network
 #   ./demo.sh --fast       same, with shorter pauses (no narration time)
+#   DEMO_PAUSE=5 ./demo.sh set the pause between evidence beats
 #   DEMO_BATCH=MY-ID ./demo.sh    pin the batch id instead of generating one
 #
 # The batch id is unique per run, so the demo is re-runnable: RegisterBatch
@@ -39,12 +44,18 @@ export OFFCHAIN_STORAGE_ROOT="${OFFCHAIN_STORAGE_ROOT:-${REPO_ROOT}/.offchain-st
 
 BATCH_ID="${DEMO_BATCH:-DEMO-$(date +%s)}"
 
-PAUSE=3
+PAUSE="${DEMO_PAUSE:-3}"
+case "$PAUSE" in
+  ''|*[!0-9]*)
+    echo "DEMO_PAUSE must be a non-negative integer number of seconds" >&2
+    exit 2
+    ;;
+esac
 for arg in "$@"; do
   case "$arg" in
     --fast) PAUSE=0 ;;
     -h|--help)
-      sed -n '2,26p' "${BASH_SOURCE[0]:-$0}"
+      sed -n '2,32p' "${BASH_SOURCE[0]:-$0}"
       exit 0
       ;;
     *)
@@ -157,7 +168,40 @@ must_be_refused "a non-holder is refused TransferCustody" \
   cli transporter transfer --batch "$BATCH_ID" --to Org1MSP
 
 # ---------------------------------------------------------------------------
-banner "ACT 4 — the oracle breaks the cold chain"
+banner "ACT 4 — the clean path: a batch actually arrives"
+say "Before the incident, the happy ending: a second batch that keeps its cold" \
+    "chain and completes the journey. DELIVERED is the terminus the main batch" \
+    "will never reach, so a side batch has to demonstrate it."
+
+OK_BATCH="${BATCH_ID}-OK"
+
+must "producer registers ${OK_BATCH}" \
+  cli producer register --batch "$OK_BATCH" --food-type chilled --quantity 300 \
+      --origin "Riverina NSW"
+
+say "Two custody legs: CREATED -> IN_TRANSIT (goods on the truck), then" \
+    "IN_TRANSIT -> AT_WAREHOUSE (goods received at the dock). The status walks" \
+    "regardless of whether the holder MSP changes."
+# Both transfers name Org1MSP as the recipient, so the holder stays Org1MSP
+# while the status walks — which keeps the batch deliverable by warehouse1, an
+# Org1 identity, since MarkDelivered requires caller MSP == currentHolder.
+must "custody leg 1: the batch goes into transit" \
+  cli transporter transfer --batch "$OK_BATCH" --to Org1MSP
+must "custody leg 2: the batch is received at the warehouse" \
+  cli transporter transfer --batch "$OK_BATCH" --to Org1MSP
+
+say "warehouse1 — the holder's receiving identity — closes the chain. Only the" \
+    "current holder may, and only from AT_WAREHOUSE: a batch still on the road" \
+    "cannot be marked delivered."
+must "warehouse marks the batch delivered" \
+  cli warehouse deliver --batch "$OK_BATCH"
+
+say "The clean batch reads DELIVERED. Now for the batch that goes wrong."
+must "the delivered batch is final" \
+  cli warehouse show --batch "$OK_BATCH"
+
+# ---------------------------------------------------------------------------
+banner "ACT 5 — the oracle breaks the cold chain"
 say "The oracle service signs as oracle1 (oracle=true) — the only identity" \
     "SubmitTemperatureReading accepts. It stores the raw sensor series off" \
     "chain, then submits one summary per window with the series hash attached." \
@@ -176,7 +220,7 @@ must "batch was flagged automatically" \
   cli regulator show --batch "$BATCH_ID"
 
 # ---------------------------------------------------------------------------
-banner "ACT 5 — the regulator audits and recalls"
+banner "ACT 6 — the regulator audits and recalls"
 say "regulator1 reads the complete trail: every committed version of the key," \
     "the oracle's readings with the breaches marked, and the breach counter." \
     "This is the traceability requirement, answered from the ledger itself."
@@ -193,12 +237,24 @@ say "RECALLED is terminal: the state machine allows no move out of it, so even" 
 must "recalled batch is final" \
   cli regulator show --batch "$BATCH_ID"
 
-say "Finally, what each organisation is holding right now."
-must "regulator lists Org2MSP holdings" \
-  cli regulator holdings --holder Org2MSP
+# The ledger is deliberately persistent between rehearsals, so printing the
+# complete holder index here grows without bound and eventually scrolls the
+# evidence above out of a presentation terminal. The query remains available
+# for a code walkthrough or marker inspection, but the default live story is
+# bounded to the batches created by this run. Set DEMO_SHOW_HOLDINGS=1 when the
+# composite-key query itself is what needs to be demonstrated.
+if [ "${DEMO_SHOW_HOLDINGS:-0}" = "1" ]; then
+  say "Finally, what each organisation is holding right now."
+  must "regulator lists Org2MSP holdings" \
+    cli regulator holdings --holder Org2MSP
+else
+  say "The holder~batchId composite-key query remains available as" \
+      "'regulator holdings'; it is omitted here so previous rehearsal data" \
+      "cannot make the five-minute presentation output grow without bound."
+fi
 
 # ---------------------------------------------------------------------------
-banner "ACT 6 — one recall cascades through the derivation graph"
+banner "ACT 7 — one recall cascades through the derivation graph"
 say "A pallet rarely stays whole: it is split into cases and repacked, and each" \
     "child batch records the batch it came from. Recalling the parent has to" \
     "follow that graph, or contaminated stock stays on the shelf."
@@ -237,10 +293,13 @@ banner "DEMO COMPLETE"
 echo
 echo "  Batch ${BATCH_ID} travelled:"
 echo "    CREATED -> IN_TRANSIT -> FLAGGED (automatically) -> RECALLED"
+echo "  Batch ${BATCH_ID}-OK travelled:"
+echo "    CREATED -> IN_TRANSIT -> AT_WAREHOUSE -> DELIVERED"
 echo
 echo "  Demonstrated:"
 echo "    * role-based access control from signed CA certificate attributes"
 echo "    * custody enforced against the current holder, not a job title"
+echo "    * the full clean lifecycle closed out by the warehouse identity"
 echo "    * private data kept off the public ledger via the transient map"
 echo "    * bulk documents off chain, anchored on chain by content hash"
 echo "    * an oracle bridging off-chain sensor data onto the ledger"

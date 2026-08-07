@@ -118,6 +118,169 @@ describe('event decoding', () => {
     });
   });
 
+  describe('BatchDelivered', () => {
+    it('decodes the delivering holder', () => {
+      const decoded = decodeEvent(
+        rawEvent('BatchDelivered', {
+          batchId: 'BATCH-1',
+          holder: 'Org2MSP',
+          timestamp: 1_700_002_000,
+        }),
+      );
+
+      expect(decoded).to.include({
+        eventName: 'BatchDelivered',
+        batchId: 'BATCH-1',
+        holder: 'Org2MSP',
+        timestamp: 1_700_002_000,
+      });
+    });
+
+    it('rejects a payload missing the holder', () => {
+      expect(() =>
+        decodeEvent(rawEvent('BatchDelivered', { batchId: 'BATCH-1', timestamp: 1 })),
+      ).to.throw(EventDecodeError, /"holder" must be a string/);
+    });
+
+    it('rejects an empty holder rather than indexing a blank MSP', () => {
+      expect(() =>
+        decodeEvent(rawEvent('BatchDelivered', { batchId: 'BATCH-1', holder: '', timestamp: 1 })),
+      ).to.throw(EventDecodeError, /"holder" must not be empty/);
+    });
+  });
+
+  describe('BatchRecalled', () => {
+    it('decodes the minimal batchId + timestamp payload', () => {
+      const decoded = decodeEvent(
+        rawEvent('BatchRecalled', { batchId: 'BATCH-1', timestamp: 1_700_003_000 }),
+      );
+
+      expect(decoded).to.include({
+        eventName: 'BatchRecalled',
+        batchId: 'BATCH-1',
+        timestamp: 1_700_003_000,
+      });
+    });
+
+    it('rejects a payload missing the timestamp', () => {
+      expect(() => decodeEvent(rawEvent('BatchRecalled', { batchId: 'BATCH-1' }))).to.throw(
+        EventDecodeError,
+        /"timestamp" must be a number or numeric string/,
+      );
+    });
+  });
+
+  describe('ComplianceBreach', () => {
+    it('decodes the numeric breach fields and the evidence hash', () => {
+      const decoded = decodeEvent(
+        rawEvent('ComplianceBreach', {
+          batchId: 'BATCH-1',
+          consecutive: 3,
+          tempC: 9.5,
+          rawDataHash: 'c'.repeat(64),
+          timestamp: 1_700_004_000,
+        }),
+      );
+
+      expect(decoded).to.include({
+        eventName: 'ComplianceBreach',
+        batchId: 'BATCH-1',
+        consecutive: 3,
+        tempC: 9.5,
+        rawDataHash: 'c'.repeat(64),
+        timestamp: 1_700_004_000,
+      });
+    });
+
+    it('rejects a stringified consecutive count — numbers are validated, not cast', () => {
+      expect(() =>
+        decodeEvent(
+          rawEvent('ComplianceBreach', {
+            batchId: 'B',
+            consecutive: '3',
+            tempC: 9.5,
+            rawDataHash: 'c'.repeat(64),
+            timestamp: 1,
+          }),
+        ),
+      ).to.throw(EventDecodeError, /"consecutive" must be a number, got string/);
+    });
+
+    it('rejects a non-finite temperature, which JSON.parse can produce from 1e999', () => {
+      expect(() =>
+        decodeEvent(
+          rawEvent(
+            'ComplianceBreach',
+            // Hand-built JSON: 1e999 parses to Infinity, which JSON.stringify
+            // would round-trip to null and hide the case being tested.
+            `{"batchId":"B","consecutive":3,"tempC":1e999,"rawDataHash":"${'c'.repeat(64)}","timestamp":1}`,
+          ),
+        ),
+      ).to.throw(EventDecodeError, /"tempC" is not a finite number/);
+    });
+
+    it('rejects a payload missing the rawDataHash', () => {
+      expect(() =>
+        decodeEvent(
+          rawEvent('ComplianceBreach', { batchId: 'B', consecutive: 3, tempC: 9.5, timestamp: 1 }),
+        ),
+      ).to.throw(EventDecodeError, /"rawDataHash" must be a string/);
+    });
+  });
+
+  describe('RecallCascaded', () => {
+    it('decodes batchId from the wire field `root` and keeps the recalled list', () => {
+      const decoded = decodeEvent(
+        rawEvent('RecallCascaded', {
+          root: 'BATCH-1',
+          recalled: ['BATCH-1', 'BATCH-1-SPLIT'],
+          timestamp: 1_700_005_000,
+        }),
+      );
+
+      expect(decoded.batchId).to.equal('BATCH-1');
+      expect(decoded.eventName).to.equal('RecallCascaded');
+      if (decoded.eventName === 'RecallCascaded') {
+        expect(decoded.recalled).to.deep.equal(['BATCH-1', 'BATCH-1-SPLIT']);
+      }
+      expect(decoded.timestamp).to.equal(1_700_005_000);
+    });
+
+    it('accepts an empty recalled list — a cascade over a leaf batch is legal', () => {
+      const decoded = decodeEvent(
+        rawEvent('RecallCascaded', { root: 'BATCH-1', recalled: [], timestamp: 1 }),
+      );
+
+      if (decoded.eventName === 'RecallCascaded') {
+        expect(decoded.recalled).to.deep.equal([]);
+      }
+    });
+
+    it('rejects a payload whose recalled field is not an array', () => {
+      expect(() =>
+        decodeEvent(rawEvent('RecallCascaded', { root: 'B', recalled: 'B2', timestamp: 1 })),
+      ).to.throw(EventDecodeError, /"recalled" must be an array, got string/);
+    });
+
+    it('rejects a recalled entry that is not a string', () => {
+      expect(() =>
+        decodeEvent(rawEvent('RecallCascaded', { root: 'B', recalled: ['B2', 3], timestamp: 1 })),
+      ).to.throw(EventDecodeError, /"recalled"\[1\] must be a string, got number/);
+    });
+
+    it('rejects an empty string inside recalled rather than indexing a blank batch id', () => {
+      expect(() =>
+        decodeEvent(rawEvent('RecallCascaded', { root: 'B', recalled: [''], timestamp: 1 })),
+      ).to.throw(EventDecodeError, /"recalled"\[0\] must not be empty/);
+    });
+
+    it('rejects a payload using batchId instead of the wire field root', () => {
+      expect(() =>
+        decodeEvent(rawEvent('RecallCascaded', { batchId: 'B', recalled: [], timestamp: 1 })),
+      ).to.throw(EventDecodeError, /"root" must be a string/);
+    });
+  });
+
   describe('defensive parsing', () => {
     it('rejects a payload that is not JSON', () => {
       expect(() => decodeEvent(rawEvent('BatchRegistered', 'not json at all'))).to.throw(
@@ -214,11 +377,15 @@ describe('event decoding', () => {
   });
 
   describe('helpers', () => {
-    it('recognises exactly the three frozen event names', () => {
+    it('recognises exactly the seven frozen event names', () => {
       expect(isEventName('BatchRegistered')).to.equal(true);
       expect(isEventName('CustodyTransferred')).to.equal(true);
       expect(isEventName('BatchFlagged')).to.equal(true);
-      expect(isEventName('BatchRecalled')).to.equal(false);
+      expect(isEventName('BatchDelivered')).to.equal(true);
+      expect(isEventName('BatchRecalled')).to.equal(true);
+      expect(isEventName('ComplianceBreach')).to.equal(true);
+      expect(isEventName('RecallCascaded')).to.equal(true);
+      expect(isEventName('TemperatureRecorded')).to.equal(false);
     });
 
     it('keys an event on block, transaction and event name', () => {

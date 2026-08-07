@@ -49,6 +49,11 @@ const sendJson = (
     'Content-Type': 'application/json; charset=utf-8',
     'Content-Length': Buffer.byteLength(payload).toString(),
     'X-Query-Time-Ms': elapsedMs.toFixed(3),
+    // The showcase dashboard (docs/showcase.html) is opened straight from the
+    // filesystem, so its fetches arrive from the opaque `file://` origin and
+    // the browser blocks the response without CORS consent. `*` is safe here:
+    // the API is read-only, bound to loopback, and serves nothing secret.
+    'Access-Control-Allow-Origin': '*',
   });
   response.end(payload);
 };
@@ -174,7 +179,15 @@ export const startServer = async (options: ServerOptions = {}): Promise<RunningS
     port: boundPort,
     close: async () =>
       new Promise<void>((resolve, reject) => {
-        server.close((error) => (error !== undefined ? reject(error) : resolve()));
+        // Idempotent: on SIGINT the signal handler closes the server and the
+        // listen path's `finally` then closes it again. The second close's
+        // ERR_SERVER_NOT_RUNNING is the desired state, not a failure — turning
+        // it into a rejection would make a clean Ctrl-C exit with an error.
+        server.close((error) =>
+          error !== undefined && (error as NodeJS.ErrnoException).code !== 'ERR_SERVER_NOT_RUNNING'
+            ? reject(error)
+            : resolve(),
+        );
         // Without this, an idle keep-alive connection holds the process open
         // past close() and the demo appears to hang on Ctrl-C.
         server.closeIdleConnections();

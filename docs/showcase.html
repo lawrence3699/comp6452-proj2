@@ -1,0 +1,426 @@
+<!doctype html>
+<html lang="en" data-theme="system">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="color-scheme" content="light dark">
+  <meta name="theme-color" content="#f5f5f7">
+  <title>ColdChain Ledger — COMP6452 Project 2</title>
+  <meta name="description" content="Interactive showcase for a Hyperledger Fabric fresh-food traceability proof of concept.">
+  <link rel="stylesheet" href="showcase.css">
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to project overview</a>
+  <div class="ambient" aria-hidden="true">
+    <span class="ambient-orb ambient-orb-blue"></span>
+    <span class="ambient-orb ambient-orb-green"></span>
+  </div>
+
+  <header class="topbar">
+    <nav class="nav-shell" aria-label="Project navigation">
+      <a class="brand" href="#overview" aria-label="ColdChain Ledger overview">
+        <span class="brand-mark" aria-hidden="true">
+          <span></span><span></span><span></span>
+        </span>
+        <span>ColdChain Ledger</span>
+      </a>
+      <div class="nav-links">
+        <a href="#team">Team</a>
+        <a href="#journey">Journey</a>
+        <a href="#architecture">Architecture</a>
+        <a href="#demo">Demo</a>
+        <a href="#evidence">Evidence</a>
+      </div>
+      <div class="nav-actions">
+        <span class="nav-live" id="nav-live" data-state="checking" aria-live="polite">
+          <span class="live-dot" aria-hidden="true"></span>
+          <span id="nav-live-label">Checking indexer</span>
+        </span>
+        <button class="icon-button" id="theme-toggle" type="button" aria-label="Switch color appearance" title="Appearance">
+          <span aria-hidden="true">◐</span>
+        </button>
+        <button class="present-button" id="present-button" type="button">
+          <span aria-hidden="true">↗</span>
+          Present
+        </button>
+      </div>
+    </nav>
+  </header>
+
+  <main id="main">
+    <section class="hero section-shell" id="overview" aria-labelledby="hero-title">
+      <div class="hero-copy reveal">
+        <p class="eyebrow"><span class="eyebrow-dot"></span> COMP6452 · Project 2 · Task 3</p>
+        <h1 id="hero-title">Fresh food.<br><span>Shared truth.</span></h1>
+        <p class="hero-lede">
+          Two smart contracts. Three off-chain services. One auditable flow.
+        </p>
+        <div class="hero-actions">
+          <a class="primary-action" href="#demo">Explore the live story <span aria-hidden="true">↓</span></a>
+          <a class="secondary-action" href="#architecture">See the architecture</a>
+        </div>
+        <div class="hero-proof" aria-label="Technology summary">
+          <span>Hyperledger Fabric 2.5</span>
+          <span>2 organisations</span>
+          <span>CCaaS · Sequence 4</span>
+        </div>
+      </div>
+
+      <div class="hero-console reveal" aria-label="Illustration of the live supply-chain control centre">
+        <div class="console-chrome">
+          <div class="traffic-lights" aria-hidden="true"><span></span><span></span><span></span></div>
+          <span>Live supply-chain control centre</span>
+          <span class="secure-label"><span aria-hidden="true">●</span> mychannel</span>
+        </div>
+        <div class="console-body">
+          <div class="batch-summary">
+            <div>
+              <p class="micro-label">Active batch</p>
+              <strong>RIVERINA · 042</strong>
+            </div>
+            <span class="status-pill status-flagged">Flagged automatically</span>
+          </div>
+          <div class="route-map" aria-label="Producer to transporter to warehouse route">
+            <div class="route-line"><span class="route-progress"></span></div>
+            <div class="route-stop complete">
+              <span class="route-icon" aria-hidden="true">P</span>
+              <div><strong>Producer</strong><small>Org1MSP · 09:12</small></div>
+            </div>
+            <div class="route-stop complete">
+              <span class="route-icon" aria-hidden="true">T</span>
+              <div><strong>In transit</strong><small>Org2MSP · 11:46</small></div>
+            </div>
+            <div class="route-stop alert">
+              <span class="route-icon" aria-hidden="true">!</span>
+              <div><strong>Cold-chain breach</strong><small>3 consecutive windows</small></div>
+            </div>
+          </div>
+          <div class="sensor-panel">
+            <div class="temperature-block">
+              <p class="micro-label">Latest mean</p>
+              <strong>8.98<span>°C</span></strong>
+              <small>Allowed 0–4°C</small>
+            </div>
+            <div class="sparkline" aria-label="Temperature rises above the safe range">
+              <svg viewBox="0 0 260 90" role="img" aria-label="Four temperature windows: one safe and three breaches">
+                <path class="safe-band" d="M0 58 H260 V82 H0 Z"></path>
+                <path class="spark-area" d="M0 69 C22 68 37 70 58 66 S84 25 112 23 S143 20 168 25 S211 19 260 22 V90 H0 Z"></path>
+                <path class="spark-line" d="M0 69 C22 68 37 70 58 66 S84 25 112 23 S143 20 168 25 S211 19 260 22"></path>
+                <circle cx="260" cy="22" r="5"></circle>
+              </svg>
+            </div>
+          </div>
+          <div class="anchor-row">
+            <span class="anchor-icon" aria-hidden="true">#</span>
+            <div><strong>Evidence anchored</strong><small>SHA-256 · raw series stored off chain</small></div>
+            <span class="verified-mark" aria-label="Verified">✓</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="proof-strip section-shell reveal" aria-label="Verified implementation statistics">
+      <article><strong id="metric-tests">336</strong><span>unit tests passing</span></article>
+      <article><strong>29/29</strong><span>end-to-end assertions</span></article>
+      <article><strong>2</strong><span>business-logic contracts</span></article>
+      <article><strong>7</strong><span>indexed event types</span></article>
+    </section>
+
+    <section class="content-section section-shell team-section" id="team" aria-labelledby="team-title">
+      <div class="section-heading reveal">
+        <p class="eyebrow">Team ownership</p>
+        <h2 id="team-title">Four owners. One working system.</h2>
+        <p>Clear ownership from contract to live demo.</p>
+      </div>
+
+      <div class="team-chart-grid">
+        <article class="team-orbit-card reveal" aria-labelledby="ownership-chart-title">
+          <div class="mini-card-heading">
+            <div><p class="eyebrow">Ownership map</p><h3 id="ownership-chart-title">System owners</h3></div>
+            <span>4 / 4</span>
+          </div>
+          <div class="team-orbit-chart" role="img" aria-label="Four equal ownership arcs for the four team members">
+            <div class="team-orbit-ring" aria-hidden="true"></div>
+            <div class="team-orbit-core"><strong>4</strong><span>owners</span></div>
+            <span class="orbit-label orbit-label-1"><i></i> Yan</span>
+            <span class="orbit-label orbit-label-2"><i></i> Hu</span>
+            <span class="orbit-label orbit-label-3"><i></i> Lin</span>
+            <span class="orbit-label orbit-label-4"><i></i> Huang</span>
+          </div>
+        </article>
+
+        <article class="team-matrix-card reveal" aria-labelledby="matrix-title">
+          <div class="mini-card-heading">
+            <div><p class="eyebrow">Responsibility matrix</p><h3 id="matrix-title">Who built what</h3></div>
+            <div class="matrix-legend"><span><i class="matrix-lead"></i> Lead</span><span><i></i> —</span></div>
+          </div>
+          <div class="team-matrix-wrap" id="team-matrix"></div>
+        </article>
+      </div>
+
+      <div class="team-cards" id="team-cards" aria-label="Team member deliverables"></div>
+
+      <article class="collaboration-card reveal" aria-labelledby="collaboration-title">
+        <div class="collaboration-header">
+          <div>
+            <p class="eyebrow">Animated walkthrough</p>
+            <h3 id="collaboration-title">How four workstreams become one transaction</h3>
+          </div>
+          <div class="flow-controls">
+            <button type="button" id="flow-previous" aria-label="Previous animation step">‹</button>
+            <button type="button" id="flow-play" aria-label="Pause animation"><span aria-hidden="true">Ⅱ</span><span class="flow-play-label">Pause</span></button>
+            <button type="button" id="flow-next" aria-label="Next animation step">›</button>
+          </div>
+        </div>
+
+        <div class="flow-stepper" id="flow-stepper" aria-label="Animation steps"></div>
+
+        <div class="collaboration-stage-scroll">
+        <div class="collaboration-stage" id="collaboration-stage" data-step="0">
+          <svg class="flow-wires" viewBox="0 0 1000 560" role="img" aria-label="Animated data flow between client applications, registry, compliance and off-chain services">
+            <path data-flow-path="client-registry" d="M 220 390 C 118 330, 118 220, 220 160"></path>
+            <path data-flow-path="offchain-compliance" d="M 780 390 C 882 330, 882 220, 780 160"></path>
+            <path data-flow-path="compliance-registry" d="M 700 125 C 580 38, 420 38, 300 125"></path>
+            <path data-flow-path="registry-core" d="M 302 175 C 380 214, 430 248, 470 275"></path>
+            <path data-flow-path="compliance-core" d="M 698 175 C 620 214, 570 248, 530 275"></path>
+            <circle class="flow-packet" id="flow-packet" r="8" cx="220" cy="390"></circle>
+          </svg>
+
+          <div class="flow-node flow-node-registry" data-flow-node="registry">
+            <div class="flow-owner"><span>CY</span><div><small>Yan, Chaoliang</small><strong>batch-registry</strong></div></div>
+            <div class="flow-responsibilities"><span>State</span><span>ABAC</span><span>PDC</span></div>
+          </div>
+
+          <div class="flow-node flow-node-compliance" data-flow-node="compliance">
+            <div class="flow-owner"><span>ZH</span><div><small>Hu, Zhaoheng</small><strong>coldchain-compliance</strong></div></div>
+            <div class="flow-responsibilities"><span>Counter</span><span>Flag</span><span>BFS</span></div>
+          </div>
+
+          <div class="flow-node flow-node-client" data-flow-node="client">
+            <div class="flow-owner"><span>NH</span><div><small>Huang, Neier</small><strong>clients + network</strong></div></div>
+            <div class="flow-responsibilities"><span>Identity</span><span>CLIs</span><span>Lifecycle</span></div>
+          </div>
+
+          <div class="flow-node flow-node-offchain" data-flow-node="offchain">
+            <div class="flow-owner"><span>CL</span><div><small>Lin, Chi-Hsien</small><strong>off-chain services</strong></div></div>
+            <div class="flow-responsibilities"><span>Aggregate</span><span>Re-hash</span><span>Split</span></div>
+          </div>
+
+          <div class="flow-core" id="flow-core">
+            <span class="flow-core-kicker">RESULT</span>
+            <strong id="flow-core-state">CREATED</strong>
+            <div class="recall-mini-nodes" aria-hidden="true"><i></i><i></i><i></i></div>
+          </div>
+        </div>
+        </div>
+
+        <div class="flow-caption" aria-live="polite">
+          <span class="flow-caption-number" id="flow-caption-number">01</span>
+          <div><strong id="flow-caption-title">Signed registration</strong><p id="flow-caption-copy">Identity → ABAC → private data</p></div>
+          <span class="flow-caption-owner" id="flow-caption-owner">Huang → Yan</span>
+        </div>
+      </article>
+
+      <article class="handoff-card reveal" aria-labelledby="handoff-title">
+        <div class="mini-card-heading">
+          <div><p class="eyebrow">Delivery chain</p><h3 id="handoff-title">People → components → demo</h3></div>
+          <span>End to end</span>
+        </div>
+        <div class="handoff-chart" id="handoff-chart"></div>
+      </article>
+    </section>
+
+    <section class="content-section section-shell" id="journey" aria-labelledby="journey-title">
+      <div class="section-heading reveal">
+        <p class="eyebrow">One batch, two possible endings</p>
+        <h2 id="journey-title">The lifecycle is policy, not a suggestion.</h2>
+        <p>On-chain state machine: clean delivery or automatic recall.</p>
+      </div>
+
+      <div class="journey-card reveal">
+        <div class="segmented-control" role="group" aria-label="Choose a batch journey">
+          <button type="button" data-journey="incident" aria-pressed="true">Incident path</button>
+          <button type="button" data-journey="clean" aria-pressed="false">Clean delivery</button>
+        </div>
+        <div class="journey-stage" id="journey-stage" data-journey="incident">
+          <div class="journey-track" aria-hidden="true"><span id="journey-progress"></span></div>
+          <div class="journey-nodes" id="journey-nodes"></div>
+        </div>
+        <div class="journey-explanation" id="journey-explanation" aria-live="polite"></div>
+      </div>
+    </section>
+
+    <section class="content-section section-shell" id="architecture" aria-labelledby="architecture-title">
+      <div class="section-heading reveal">
+        <p class="eyebrow">Architecture</p>
+        <h2 id="architecture-title">Shared truth on chain. Scale and privacy off chain.</h2>
+        <p>Policy on chain. Scale and privacy off chain.</p>
+      </div>
+
+      <div class="architecture-grid reveal">
+        <div class="architecture-main">
+          <div class="layer-label"><span>01</span> Client identities</div>
+          <div class="component-row three">
+            <article class="component-card">
+              <span class="component-symbol blue" aria-hidden="true">P</span>
+              <div><strong>Producer app</strong><small>Register · split · private details</small></div>
+              <em class="owner-badge owner-4">Huang</em>
+            </article>
+            <article class="component-card">
+              <span class="component-symbol orange" aria-hidden="true">T</span>
+              <div><strong>Transport & warehouse</strong><small>Transfer custody · deliver</small></div>
+              <em class="owner-badge owner-4">Huang</em>
+            </article>
+            <article class="component-card">
+              <span class="component-symbol purple" aria-hidden="true">R</span>
+              <div><strong>Regulator app</strong><small>Trace · flag · recall</small></div>
+              <em class="owner-badge owner-4">Huang</em>
+            </article>
+          </div>
+
+          <div class="connector-label"><span></span>Fabric Gateway · signed proposals<span></span></div>
+
+          <div class="layer-label"><span>02</span> On-chain policy</div>
+          <div class="component-row two chaincode-row">
+            <article class="chaincode-card registry-card">
+              <div class="chaincode-top"><span class="contract-mark">BR</span><span class="code-tag owner-1-text">YAN · SMART CONTRACT</span></div>
+              <h3>batch-registry</h3>
+              <p>Lifecycle state machine, holder-gated custody, ABAC and private data.</p>
+              <ul><li>FR1 · registration</li><li>FR2 · traceability</li><li>Private collection</li></ul>
+            </article>
+            <article class="chaincode-card compliance-card">
+              <div class="chaincode-top"><span class="contract-mark">CC</span><span class="code-tag owner-2-text">HU · SMART CONTRACT</span></div>
+              <h3>coldchain-compliance</h3>
+              <p>Threshold decisions, automated flagging and derivation-aware recall.</p>
+              <ul><li>FR3 · problem batches</li><li>3-window threshold</li><li>Recall cascade</li></ul>
+            </article>
+            <div class="cross-call" aria-label="Cross chaincode call from compliance to registry">
+              <span>FlagBatch()</span><i aria-hidden="true">→</i>
+            </div>
+          </div>
+
+          <div class="connector-label"><span></span>Events · hashes · oracle summaries<span></span></div>
+
+          <div class="layer-label"><span>03</span> Off-chain services</div>
+          <div class="component-row three">
+            <article class="component-card service-card"><span class="component-symbol green" aria-hidden="true">O</span><div><strong>Oracle</strong><small>Aggregate · sign · submit</small></div><em class="owner-badge owner-3">Lin</em></article>
+            <article class="component-card service-card"><span class="component-symbol cyan" aria-hidden="true">S</span><div><strong>Storage</strong><small>Filesystem / IPFS · verify</small></div><em class="owner-badge owner-3">Lin</em></article>
+            <article class="component-card service-card"><span class="component-symbol pink" aria-hidden="true">I</span><div><strong>Event indexer</strong><small>Checkpoint · dedupe · query</small></div><em class="owner-badge owner-3">Lin</em></article>
+          </div>
+
+          <div class="network-base">
+            <div><span class="network-pulse" aria-hidden="true"></span><strong>Fabric test network</strong></div>
+            <span>Org1MSP + Org2MSP · mychannel · Raft orderer · CCaaS</span>
+          </div>
+        </div>
+
+        <aside class="placement-card" aria-labelledby="placement-title">
+          <p class="eyebrow">Data placement</p>
+          <h3 id="placement-title">Put each byte where it earns its cost.</h3>
+          <div class="placement-group on-chain">
+            <div class="placement-heading"><span aria-hidden="true">◆</span><strong>On chain</strong></div>
+            <ul>
+              <li><span>Batch state & custody</span><small>Shared business truth</small></li>
+              <li><span>Policy decisions</span><small>Flag and recall</small></li>
+              <li><span>Content hashes</span><small>Tamper evidence</small></li>
+            </ul>
+          </div>
+          <div class="placement-group off-chain">
+            <div class="placement-heading"><span aria-hidden="true">◇</span><strong>Off chain</strong></div>
+            <ul>
+              <li><span>Sensor series</span><small>High-volume input</small></li>
+              <li><span>Reports & photos</span><small>Content-addressed</small></li>
+              <li><span>Read model</span><small>Sub-millisecond queries</small></li>
+            </ul>
+          </div>
+          <p class="placement-note">Commercial price and inspection notes use a Fabric private data collection—shared only with authorised organisations.</p>
+        </aside>
+      </div>
+    </section>
+
+    <section class="content-section demo-section" id="demo" aria-labelledby="demo-title">
+      <div class="section-shell">
+        <div class="section-heading light-heading reveal">
+          <p class="eyebrow">Five-minute live demo</p>
+          <h2 id="demo-title">Seven acts. Every claim leaves evidence.</h2>
+          <p>Fresh batch ID. Real identities. Verifiable outcomes.</p>
+        </div>
+      </div>
+      <div class="demo-rail-wrap">
+        <div class="demo-rail section-shell" tabindex="0" aria-label="Seven demo acts; scroll horizontally">
+          <article class="demo-act"><span class="act-number">01</span><div class="act-icon" aria-hidden="true">＋</div><h3>Register</h3><p>Public batch · private price · hashed report.</p><small>RegisterBatch</small></article>
+          <article class="demo-act"><span class="act-number">02</span><div class="act-icon" aria-hidden="true">⊘</div><h3>Reject</h3><p>Wrong CA role. Transaction refused.</p><small>ABAC</small></article>
+          <article class="demo-act"><span class="act-number">03</span><div class="act-icon" aria-hidden="true">→</div><h3>Transfer</h3><p>Org1 → Org2. Old holder blocked.</p><small>Custody</small></article>
+          <article class="demo-act"><span class="act-number">04</span><div class="act-icon" aria-hidden="true">✓</div><h3>Deliver</h3><p>CREATED → DELIVERED.</p><small>State machine</small></article>
+          <article class="demo-act accent-act"><span class="act-number">05</span><div class="act-icon" aria-hidden="true">⌁</div><h3>Detect</h3><p>3 breaches → automatic flag.</p><small>Oracle · cross-call</small></article>
+          <article class="demo-act"><span class="act-number">06</span><div class="act-icon" aria-hidden="true">≡</div><h3>Audit</h3><p>History → regulator recall.</p><small>Ledger history</small></article>
+          <article class="demo-act"><span class="act-number">07</span><div class="act-icon" aria-hidden="true">⌘</div><h3>Cascade</h3><p>Pallet → case → pack.</p><small>Recall graph</small></article>
+        </div>
+      </div>
+      <div class="section-shell demo-command-wrap reveal">
+        <div class="demo-command">
+          <div><span class="terminal-dot" aria-hidden="true"></span><code>cd application &amp;&amp; ./showcase.sh</code></div>
+          <button type="button" id="copy-command">Copy</button>
+        </div>
+      </div>
+    </section>
+
+    <section class="content-section section-shell" id="evidence" aria-labelledby="evidence-title">
+      <div class="section-heading reveal">
+        <p class="eyebrow">Engineering evidence</p>
+        <h2 id="evidence-title">The demo is backed by tests, not theatre.</h2>
+        <p>Seven packages. Unit, integration and live-network proof.</p>
+      </div>
+
+      <div class="evidence-grid">
+        <article class="evidence-card reveal">
+          <div class="card-heading"><div><p class="eyebrow">Unit tests</p><h3>336 passing</h3></div><span class="success-badge">All green</span></div>
+          <div class="test-bars" id="test-bars" aria-label="Unit tests by package"></div>
+        </article>
+        <article class="evidence-card reveal">
+          <div class="card-heading"><div><p class="eyebrow">Event coverage</p><h3>Every emitted type indexed</h3></div><span class="success-badge">7 / 7</span></div>
+          <div class="event-list" id="event-list"></div>
+          <div class="event-legend"><span><i class="legend-blue"></i> batch-registry</span><span><i class="legend-green"></i> coldchain-compliance</span></div>
+        </article>
+      </div>
+    </section>
+
+    <section class="content-section section-shell live-section" id="live" aria-labelledby="live-title">
+      <div class="live-card reveal">
+        <div class="live-card-header">
+          <div>
+            <p class="eyebrow">Live event indexer</p>
+            <h2 id="live-title">The ledger, shaped for fast reads.</h2>
+            <p>Checkpointed events. Deduplicated reads. Live latency.</p>
+          </div>
+          <button class="refresh-button" id="refresh-button" type="button"><span aria-hidden="true">↻</span> Refresh</button>
+        </div>
+        <div id="live-panel" class="live-panel" aria-live="polite">
+          <div class="live-loading"><span></span><span></span><span></span><p>Connecting to the local indexer…</p></div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="footer section-shell">
+    <div><span class="brand-mark small" aria-hidden="true"><span></span><span></span><span></span></span><strong>ColdChain Ledger</strong></div>
+    <p>COMP6452 · Software Architecture for Blockchain Applications · 2026 T2</p>
+    <p>Verified 30 July 2026</p>
+  </footer>
+
+  <div class="sheet-scrim" id="sheet-scrim" hidden></div>
+  <aside class="batch-sheet" id="batch-sheet" role="dialog" aria-modal="true" aria-labelledby="sheet-title" aria-hidden="true" hidden>
+    <div class="sheet-handle-zone" id="sheet-handle" aria-label="Drag down to close">
+      <span class="sheet-handle" aria-hidden="true"></span>
+    </div>
+    <div class="sheet-header">
+      <div><p class="eyebrow">Indexed batch history</p><h2 id="sheet-title">Batch</h2></div>
+      <button class="sheet-close icon-button" id="sheet-close" type="button" aria-label="Close batch history">×</button>
+    </div>
+    <div class="sheet-content" id="sheet-content"></div>
+  </aside>
+
+  <div class="toast" id="toast" role="status" aria-live="polite" hidden>Command copied</div>
+  <script src="showcase.js"></script>
+</body>
+</html>

@@ -10,7 +10,8 @@
  * connect looks identical to a demo with no code in it.
  */
 
-import { listen } from './listen';
+import { loadConfig } from '@comp6452/offchain-shared';
+import { ListenResult, listen } from './listen';
 import { startServer } from './server';
 import { currentStore } from './store';
 
@@ -59,28 +60,55 @@ export const main = async (): Promise<void> => {
   }
 
   const startBlock = startBlockFromEnv();
+  const config = loadConfig();
+  // One stream per chaincode: registry lifecycle events and compliance events
+  // are emitted by different chaincodes, and a single getChaincodeEvents
+  // subscription only ever sees one of them. Both streams share the store
+  // (dedup and history live there) and the AbortController, so Ctrl-C stops
+  // the pair; each keeps its own checkpoint file — see listen.ts.
+  const chaincodes = [config.registryChaincode, config.complianceChaincode];
   console.log(
-    `indexer: subscribing to chaincode events` +
+    `indexer: subscribing to chaincode events on ${chaincodes.join(' + ')}` +
       `${startBlock !== undefined ? ` from block ${startBlock.toString()} (unless checkpointed)` : ''}`,
   );
 
-  try {
-    const result = await listen({
+  const listenTo = (chaincodeName: string): Promise<ListenResult> =>
+    listen({
+      chaincodeName,
+      config,
       store,
       signal: controller.signal,
       ...(startBlock !== undefined ? { startBlock } : {}),
       onEvent: (event, isNew) => {
         console.log(
-          `  ${isNew ? 'indexed' : 'duplicate'} ${event.eventName} ` +
+          `  [${chaincodeName}] ${isNew ? 'indexed' : 'duplicate'} ${event.eventName} ` +
             `batch=${event.batchId} block=${String(event.blockNumber)} tx=${event.transactionId.slice(0, 12)}`,
         );
       },
-      onSkip: (reason) => console.warn(`indexer: ${reason}`),
+      onSkip: (reason) => console.warn(`indexer: [${chaincodeName}] ${reason}`),
     });
-    console.log(
-      `indexer: stopped — ${String(result.indexed)} indexed, ` +
-        `${String(result.duplicates)} duplicate, ${String(result.skipped)} skipped`,
+
+  try {
+    // Promise.all, not allSettled: if one stream fails hard the process should
+    // exit loudly rather than half-index — reconnectable errors never escape
+    // listen(), so a rejection here is a config or crypto-material problem
+    // that would hit the second stream too. The abort on failure is what stops
+    // the surviving stream; without it Promise.all would reject while the
+    // other listener holds the process open on its gRPC stream.
+    const results = await Promise.all(
+      chaincodes.map((chaincodeName) =>
+        listenTo(chaincodeName).catch((error: unknown) => {
+          controller.abort();
+          throw error;
+        }),
+      ),
     );
+    for (const [i, result] of results.entries()) {
+      console.log(
+        `indexer: [${chaincodes[i] ?? '?'}] stopped — ${String(result.indexed)} indexed, ` +
+          `${String(result.duplicates)} duplicate, ${String(result.skipped)} skipped`,
+      );
+    }
   } finally {
     await running.close();
   }

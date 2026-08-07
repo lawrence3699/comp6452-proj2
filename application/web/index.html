@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark">
+  <title>ColdChain Ledger · Live Code Walkthrough</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="/">ColdChain <strong>Ledger</strong></a>
+    <div class="network-status" id="network-status" data-state="checking">
+      <i></i><span>Checking Fabric network</span>
+    </div>
+  </header>
+
+  <main>
+    <section class="hero">
+      <div>
+        <p class="eyebrow">COMP6452 · LIVE CODE WALKTHROUGH</p>
+        <h1>Watch the code drive<br><span>the complete ledger story.</span></h1>
+        <p class="lede">A realistic execution simulation highlights the exact TypeScript blocks used by the Fabric client, chaincodes, oracle and event indexer. Run the real network flow when you are ready.</p>
+      </div>
+      <div class="control-card">
+        <label for="batch-id">Batch ID for this run</label>
+        <div class="input-row">
+          <input id="batch-id" maxlength="64" placeholder="Auto-generate WEB-DEMO-…" autocomplete="off">
+          <button id="start-button" type="button">Run live demo</button>
+          <button id="simulate-button" class="secondary" type="button">Play simulation</button>
+          <button id="stop-button" class="secondary" type="button" disabled>Stop</button>
+        </div>
+        <div class="command-preview"><span>$</span><code>./application/showcase.sh --fast --no-open --exit</code></div>
+        <p class="hint" id="control-hint">Run live transactions, or play the instant code simulation without changing the ledger.</p>
+      </div>
+    </section>
+
+    <section class="metrics" aria-label="Execution status">
+      <article><span>Status</span><strong id="run-status">IDLE</strong></article>
+      <article><span>Active batch</span><strong id="active-batch">—</strong></article>
+      <article><span>Completed blocks</span><strong><b id="completed-count">0</b> / 7</strong></article>
+      <article><span>Elapsed</span><strong id="elapsed">00:00</strong></article>
+    </section>
+
+    <section class="workspace">
+      <div class="process-panel panel">
+        <div class="panel-heading">
+          <div><p class="eyebrow">CODE EXECUTION MAP</p><h2>Seven blocks, one traceable transaction</h2></div>
+          <span class="real-badge">ACTUAL PROJECT CODE</span>
+        </div>
+        <ol class="steps" id="steps">
+          <li data-step="register"><div class="code-head"><i>1</i><div><strong>Register the batch</strong><span>application/src/producer.ts</span></div><em>WAITING</em></div><p>The producer signs a Fabric Gateway proposal and keeps commercial details in the transient map.</p><pre><code><b>const</b> proposal = contract.newProposal(<s>'RegisterBatch'</s>, {
+  arguments: [JSON.stringify(input)],
+  transientData: { batchPrivateDetails: JSON.stringify(details) }
+});
+<b>await</b> proposal.endorse().then(tx =&gt; tx.submit());</code></pre></li>
+          <li data-step="reject"><div class="code-head"><i>2</i><div><strong>Enforce certificate roles</strong><span>chaincode/batch-registry/src/access.ts</span></div><em>WAITING</em></div><p>The chaincode reads the CA-signed ABAC attribute. A transporter cannot impersonate a producer.</p><pre><code><b>export const</b> requireRole = (ctx, expected) =&gt; {
+  <b>const</b> actual = ctx.clientIdentity.getAttributeValue(<s>'role'</s>);
+  <b>if</b> (actual !== expected)
+    <b>throw new</b> Error(`requires ${expected}; caller is ${actual}`);
+};</code></pre></li>
+          <li data-step="transfer"><div class="code-head"><i>3</i><div><strong>Transfer custody</strong><span>chaincode/batch-registry/src/batchRegistry.ts</span></div><em>WAITING</em></div><p>Only the current holder may move the batch. The state machine selects the next legal status.</p><pre><code><b>if</b> (callerMsp !== batch.currentHolder)
+  <b>throw new</b> Error(<s>'caller is not the current holder'</s>);
+batch.status = nextCustodyStatus(batch.status);
+batch.currentHolder = toMsp;
+<b>await</b> ctx.stub.putState(key, Buffer.from(JSON.stringify(batch)));</code></pre></li>
+          <li data-step="deliver"><div class="code-head"><i>4</i><div><strong>Close the clean path</strong><span>chaincode/batch-registry/src/stateMachine.ts</span></div><em>WAITING</em></div><p>The deterministic transition table prevents delivery from an invalid lifecycle state.</p><pre><code><b>const</b> transitions = {
+  CREATED: [<s>'IN_TRANSIT'</s>],
+  IN_TRANSIT: [<s>'AT_WAREHOUSE'</s>],
+  AT_WAREHOUSE: [<s>'DELIVERED'</s>],
+  DELIVERED: []
+};</code></pre></li>
+          <li data-step="detect"><div class="code-head"><i>5</i><div><strong>Aggregate sensor evidence</strong><span>offchain/oracle-service/src/pipeline.ts</span></div><em>WAITING</em></div><p>The oracle stores raw readings off chain, hashes them, then submits window summaries sequentially.</p><pre><code><b>const</b> stored = <b>await</b> storage.put(readings);
+<b>for</b> (<b>const</b> slice of window(readings, windowSize)) {
+  <b>const</b> summary = summarise(slice);
+  <b>await</b> submit(summary, stored.hash);
+}</code></pre></li>
+          <li data-step="audit"><div class="code-head"><i>6</i><div><strong>Flag after three breaches</strong><span>chaincode/coldchain-compliance/src/compliance.ts</span></div><em>WAITING</em></div><p>The third consecutive violation atomically invokes the registry chaincode and flags the batch.</p><pre><code><b>const</b> consecutive = previous + 1;
+<b>if</b> (consecutive &gt;= VIOLATIONS_BEFORE_FLAG) {
+  <b>await</b> ctx.stub.invokeChaincode(<s>'batch-registry'</s>,
+    [<s>'BatchRegistryContract:FlagBatch'</s>, batchId, reason, hash]);
+}</code></pre></li>
+          <li data-step="cascade"><div class="code-head"><i>7</i><div><strong>Cascade the recall</strong><span>chaincode/coldchain-compliance/src/recall.ts</span></div><em>WAITING</em></div><p>A cycle-safe breadth-first traversal recalls the root and every derived batch exactly once.</p><pre><code><b>const</b> queue = [batchId], visited = <b>new</b> Set();
+<b>while</b> (queue.length) {
+  <b>const</b> id = queue.shift();
+  <b>if</b> (!id || visited.has(id)) <b>continue</b>;
+  visited.add(id); <b>await</b> recall(id);
+  queue.push(...<b>await</b> derivedBatches(id));
+}</code></pre></li>
+        </ol>
+      </div>
+
+      <div class="terminal-panel panel">
+        <div class="terminal-heading">
+          <div class="lights"><i></i><i></i><i></i></div>
+          <span>Execution output</span>
+          <button id="clear-button" type="button">Clear</button>
+        </div>
+        <div class="terminal" id="terminal" role="log" aria-live="polite">
+          <p class="system">Ready. Choose “Play simulation” for an instant walkthrough or “Run live demo” for real Fabric transactions.</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="result-card panel" id="result-card" data-state="idle">
+      <div class="result-icon">✓</div>
+      <div><p class="eyebrow">VERIFICATION</p><h2 id="result-title">Ready to execute</h2><p id="result-copy">The final process status and ledger verification result appear here.</p></div>
+      <a href="http://127.0.0.1:3001/health" target="_blank" rel="noreferrer">Indexer API ↗</a>
+    </section>
+  </main>
+
+  <script src="app.js"></script>
+</body>
+</html>

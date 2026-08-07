@@ -1,7 +1,7 @@
 /**
  * Role clients — owner: person 4.
  *
- * Three CLI clients on `@hyperledger/fabric-gateway`, each signing with its own
+ * Four CLI clients on `@hyperledger/fabric-gateway`, each signing with its own
  * Fabric CA identity so the demo shows access control being enforced rather
  * than one super-user doing everything. The gateway connection helper itself is
  * reused from `@comp6452/offchain-shared` through a `file:` dependency — there
@@ -71,6 +71,8 @@ export {
 } from './producer';
 
 export { TransitEvent, logTransitEvent, runTransporter, transferCustody } from './transporter';
+
+export { markDelivered, runWarehouse } from './warehouse';
 
 export { flagBatch, recallBatch, runRegulator } from './regulator';
 

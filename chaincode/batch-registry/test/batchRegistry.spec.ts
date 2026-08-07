@@ -232,4 +232,69 @@ describe('BatchRegistryContract', () => {
     const flagged = t.ledger.events.find((e) => e.name === 'BatchFlagged');
     expect((flagged?.payload as { flaggedBy: string }).flaggedBy).to.equal('regulator');
   });
+
+  /** Walk a fresh batch to AT_WAREHOUSE with Org1MSP as the final holder. */
+  const batchAtWarehouse = async (batchId: string): Promise<void> => {
+    t.setCaller('Org1MSP', producer);
+    await cc.RegisterBatch(t.ctx, validBatch({ batchId }));
+    await cc.TransferCustody(t.ctx, batchId, 'Org2MSP'); // CREATED -> IN_TRANSIT
+    t.setCaller('Org2MSP', { role: Role.Transporter });
+    await cc.TransferCustody(t.ctx, batchId, 'Org1MSP'); // IN_TRANSIT -> AT_WAREHOUSE
+  };
+
+  it('lets the current holder mark a warehoused batch as delivered', async () => {
+    await batchAtWarehouse('B11');
+
+    // No role attribute at all — possession alone must be enough.
+    t.setCaller('Org1MSP', {});
+    await cc.MarkDelivered(t.ctx, 'B11');
+
+    const batch = JSON.parse(await cc.GetBatch(t.ctx, 'B11')) as Batch;
+    expect(batch.status).to.equal(BatchStatus.Delivered);
+    expect(batch.currentHolder).to.equal('Org1MSP');
+
+    const delivered = t.ledger.events.find((e) => e.name === 'BatchDelivered');
+    expect(delivered).to.not.equal(undefined);
+    const payload = delivered?.payload as { batchId: string; holder: string; timestamp: number };
+    expect(payload.batchId).to.equal('B11');
+    expect(payload.holder).to.equal('Org1MSP');
+    expect(payload.timestamp).to.equal(1_800_000_000);
+
+    // Delivery does not move the batch, so the holder index must not change.
+    const key = t.ctx.stub.createCompositeKey(HOLDER_INDEX, ['Org1MSP', 'B11']);
+    expect(t.ledger.state.has(key)).to.equal(true);
+  });
+
+  it('rejects MarkDelivered from an identity that is not the holder', async () => {
+    await batchAtWarehouse('B12');
+
+    // Org2 handed the batch off already; it can no longer close the journey.
+    t.setCaller('Org2MSP', { role: Role.Transporter });
+    await expect(cc.MarkDelivered(t.ctx, 'B12')).to.be.rejectedWith(/not the current holder/);
+    expect(t.ledger.events.some((e) => e.name === 'BatchDelivered')).to.equal(false);
+  });
+
+  it('rejects MarkDelivered on a batch still in transit', async () => {
+    t.setCaller('Org1MSP', producer);
+    await cc.RegisterBatch(t.ctx, validBatch({ batchId: 'B13' }));
+    await cc.TransferCustody(t.ctx, 'B13', 'Org2MSP'); // CREATED -> IN_TRANSIT
+
+    t.setCaller('Org2MSP', { role: Role.Transporter });
+    await expect(cc.MarkDelivered(t.ctx, 'B13')).to.be.rejectedWith(
+      /illegal status transition/,
+    );
+  });
+
+  it('rejects a second MarkDelivered on an already delivered batch', async () => {
+    await batchAtWarehouse('B14');
+    t.setCaller('Org1MSP', {});
+    await cc.MarkDelivered(t.ctx, 'B14');
+
+    // DELIVERED -> DELIVERED is not in the state machine, so unlike FlagBatch
+    // there is no idempotent no-op here: the repeat call must throw.
+    await expect(cc.MarkDelivered(t.ctx, 'B14')).to.be.rejectedWith(
+      /illegal status transition/,
+    );
+    expect(t.ledger.events.filter((e) => e.name === 'BatchDelivered')).to.have.length(1);
+  });
 });

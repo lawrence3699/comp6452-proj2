@@ -12,6 +12,28 @@ export const READING_INDEX = 'reading~batchId~observedAt';
 /** Plain key holding the running breach counter for a batch. */
 const breachKey = (batchId: string): string => `breachCount~${batchId}`;
 
+/**
+ * Lowercase hex SHA-256, the only shape a rawDataHash may take.
+ *
+ * The hash is the sole link between the on-chain record and the off-chain raw
+ * temperature series; anchoring a malformed value produces "evidence" nobody
+ * can ever check against anything.
+ */
+const SHA256_HEX = /^[0-9a-f]{64}$/;
+
+/**
+ * Transaction time in unix seconds.
+ *
+ * Every endorsing peer must compute an identical write set or the transaction
+ * fails validation, so wall-clock sources such as Date.now() are unusable here:
+ * two endorsers would disagree. getTxTimestamp comes from the proposal and is
+ * therefore the same value on every peer.
+ */
+const txTimeSeconds = (ctx: Context): number => {
+  const ts = ctx.stub.getTxTimestamp();
+  return Number(ts.seconds);
+};
+
 interface StoredReading {
   readonly batchId: string;
   readonly tempC: number;
@@ -93,6 +115,15 @@ export class ComplianceContract extends Contract {
       throw new Error(`SubmitTemperatureReading: observedAt '${observedAt}' is not a number`);
     }
 
+    if (!SHA256_HEX.test(rawDataHash)) {
+      throw new Error(
+        `SubmitTemperatureReading: rawDataHash '${rawDataHash}' must be a ` +
+          'lowercase hex SHA-256 (64 hex characters) — it is the only link to ' +
+          'the off-chain raw series, and a malformed hash anchors evidence ' +
+          'nobody can check',
+      );
+    }
+
     const batch = await fetchBatch(ctx, batchId);
     const breached = isBreach(batch.foodType, temperature);
 
@@ -150,7 +181,13 @@ export class ComplianceContract extends Contract {
     ctx.stub.setEvent(
       'ComplianceBreach',
       Buffer.from(
-        JSON.stringify({ batchId, consecutive, tempC: temperature, rawDataHash }),
+        JSON.stringify({
+          batchId,
+          consecutive,
+          tempC: temperature,
+          rawDataHash,
+          timestamp: txTimeSeconds(ctx),
+        }),
       ),
     );
   }
@@ -191,7 +228,7 @@ export class ComplianceContract extends Contract {
 
     ctx.stub.setEvent(
       'RecallCascaded',
-      Buffer.from(JSON.stringify({ root: batchId, recalled })),
+      Buffer.from(JSON.stringify({ root: batchId, recalled, timestamp: txTimeSeconds(ctx) })),
     );
 
     return JSON.stringify(recalled);

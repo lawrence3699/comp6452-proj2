@@ -12,11 +12,10 @@
  * verifies before returning and throws on mismatch — silently returning
  * corrupted bytes would defeat the anchor.
  *
- * IPFS is not available on this machine, so the shipped backend is the local
- * filesystem. The `Backend` interface in `backend.ts` is the seam: an
- * `IpfsBackend` (write -> `ipfs.add`, read -> `ipfs.cat`) drops in behind
- * `configureBackend()` and every caller, every test and the verification path
- * below stay exactly as they are. The only visible change is
+ * Two backends ship: the local filesystem (default) and `IpfsBackend` in
+ * `ipfs.ts` (kubo HTTP API; select with STORAGE_BACKEND=ipfs). Both sit behind
+ * `configureBackend()`, so every caller, every test and the verification path
+ * below are identical under either. The only visible change is
  * `StoredObject.location`, which becomes `ipfs://<cid>`. We deliberately keep
  * our own SHA-256 as the anchored value rather than the CID, because a CID
  * depends on IPFS chunking parameters and the chaincode must not care which
@@ -26,6 +25,7 @@
 import * as crypto from 'crypto';
 import { Backend } from './backend';
 import { FilesystemBackend } from './filesystem';
+import { IpfsBackend } from './ipfs';
 
 export interface StoredObject {
   readonly hash: string;
@@ -34,6 +34,7 @@ export interface StoredObject {
 
 export { Backend } from './backend';
 export { DEFAULT_ROOT, FilesystemBackend, storageRoot } from './filesystem';
+export { DEFAULT_IPFS_API_URL, IpfsBackend, ipfsApiUrl } from './ipfs';
 
 /** Hex SHA-256 of the payload. This is the value anchored on chain. */
 export const hashOf = (payload: Buffer): string =>
@@ -53,9 +54,27 @@ export const configureBackend = (next: Backend | undefined): void => {
   backend = next;
 };
 
+/**
+ * Backend chosen by STORAGE_BACKEND. Unknown values throw rather than fall
+ * back to the filesystem: silently storing evidence somewhere other than
+ * where the operator asked would be worse than failing loudly.
+ */
+const backendFromEnv = (): Backend => {
+  const selected = process.env.STORAGE_BACKEND;
+  if (selected === undefined || selected === '' || selected === 'filesystem') {
+    return new FilesystemBackend();
+  }
+  if (selected === 'ipfs') {
+    return new IpfsBackend();
+  }
+  throw new Error(
+    `Unknown STORAGE_BACKEND "${selected}"; expected "filesystem" or "ipfs"`,
+  );
+};
+
 export const currentBackend = (): Backend => {
   if (backend === undefined) {
-    backend = new FilesystemBackend();
+    backend = backendFromEnv();
   }
   return backend;
 };

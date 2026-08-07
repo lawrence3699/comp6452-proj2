@@ -7,10 +7,10 @@
  * happily return whatever bytes the network served, and it is precisely that
  * "trust the remote" step we want to check.
  *
- * IPFS is not installed on this machine, so `FilesystemBackend` is the only
- * implementation shipped. An `IpfsBackend` would implement this same interface
- * (`put` -> `ipfs.add`, `get` -> `ipfs.cat`, `location` -> `ipfs://<cid>`) and
- * drop in behind `createBackend()` with no change to callers or to the tamper
+ * Two implementations ship behind this interface: `FilesystemBackend`
+ * (default) and `IpfsBackend` (`write` -> /api/v0/add, `read` -> /api/v0/cat,
+ * `location` -> `ipfs://<cid>`; select with STORAGE_BACKEND=ipfs). Both drop
+ * in behind `configureBackend()` with no change to callers or to the tamper
  * check — see the note in `index.ts`.
  */
 

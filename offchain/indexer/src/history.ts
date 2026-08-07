@@ -19,6 +19,13 @@ export interface CustodyStep {
   readonly holder: string;
   /** Who handed the batch over; undefined for the producer, who originated it. */
   readonly from?: string;
+  /**
+   * What happened at this step. `held` is a plain custody move (registration
+   * or transfer); `delivered` and `recalled` are terminal lifecycle marks that
+   * belong in the chain because they answer the same question the chain
+   * exists for — where the batch ended up.
+   */
+  readonly kind: 'held' | 'delivered' | 'recalled';
   readonly timestamp: number;
   readonly blockNumber: number;
   readonly transactionId: string;
@@ -32,6 +39,34 @@ export interface FlagRecord {
   readonly transactionId: string;
 }
 
+/** One threshold trip from the compliance chaincode, ledger-anchored. */
+export interface BreachRecord {
+  readonly consecutive: number;
+  readonly tempC: number;
+  readonly rawDataHash: string;
+  readonly timestamp: number;
+  readonly blockNumber: number;
+  readonly transactionId: string;
+}
+
+/**
+ * A recall cascade rooted at this batch. Appears only in the ROOT batch's
+ * history (the decoder files RecallCascaded under `root`). Note the derived
+ * batches get NO event of their own from the cascade path: Fabric commits
+ * only the outermost chaincode's events, so the BatchRecalled that
+ * batch-registry sets under invokeChaincode is dropped. `recalled` here is
+ * therefore the only off-chain record of the blast radius; a per-batch
+ * BatchRecalled row appears only when a regulator recalls that batch
+ * directly (the client's --direct path).
+ */
+export interface RecallCascade {
+  /** Every batch id the cascade recalled — the blast radius. */
+  readonly recalled: readonly string[];
+  readonly timestamp: number;
+  readonly blockNumber: number;
+  readonly transactionId: string;
+}
+
 export interface BatchHistory {
   readonly batchId: string;
   /** True once a BatchRegistered event has been indexed for this batch. */
@@ -40,8 +75,14 @@ export interface BatchHistory {
   readonly registeredAt?: number;
   /** Latest known holder — the producer, or the recipient of the last transfer. */
   readonly currentHolder?: string;
+  /** True once a BatchDelivered event has been indexed. */
+  readonly delivered: boolean;
+  /** True once a BatchRecalled event (or a cascade rooted here) has been indexed. */
+  readonly recalled: boolean;
   readonly custodyChain: readonly CustodyStep[];
   readonly flags: readonly FlagRecord[];
+  readonly breaches: readonly BreachRecord[];
+  readonly recallCascades: readonly RecallCascade[];
   /** Every raw event, oldest first. The custody chain is a projection of this. */
   readonly events: readonly IndexedEvent[];
   readonly eventCount: number;
@@ -64,10 +105,14 @@ export const assembleHistory = (
 ): BatchHistory => {
   const custodyChain: CustodyStep[] = [];
   const flags: FlagRecord[] = [];
+  const breaches: BreachRecord[] = [];
+  const recallCascades: RecallCascade[] = [];
   let registered = false;
   let producer: string | undefined;
   let registeredAt: number | undefined;
   let currentHolder: string | undefined;
+  let delivered = false;
+  let recalled = false;
 
   for (const event of events) {
     switch (event.eventName) {
@@ -78,6 +123,7 @@ export const assembleHistory = (
         currentHolder = event.producer;
         custodyChain.push({
           holder: event.producer,
+          kind: 'held',
           timestamp: event.timestamp,
           blockNumber: event.blockNumber,
           transactionId: event.transactionId,
@@ -88,6 +134,7 @@ export const assembleHistory = (
         custodyChain.push({
           holder: event.to,
           from: event.from,
+          kind: 'held',
           timestamp: event.timestamp,
           blockNumber: event.blockNumber,
           transactionId: event.transactionId,
@@ -97,6 +144,59 @@ export const assembleHistory = (
         flags.push({
           reason: event.reason,
           evidenceHash: event.evidenceHash,
+          timestamp: event.timestamp,
+          blockNumber: event.blockNumber,
+          transactionId: event.transactionId,
+        });
+        break;
+      case 'BatchDelivered':
+        // A lifecycle step, not just a boolean: delivery ends the custody
+        // story, so it belongs in the chain in the position it happened. The
+        // event's `holder` is the MSP that completed the delivery, which is
+        // also our best knowledge of who holds the goods now.
+        delivered = true;
+        currentHolder = event.holder;
+        custodyChain.push({
+          holder: event.holder,
+          kind: 'delivered',
+          timestamp: event.timestamp,
+          blockNumber: event.blockNumber,
+          transactionId: event.transactionId,
+        });
+        break;
+      case 'BatchRecalled':
+        // The recall carries no holder; whoever held the batch still holds
+        // the (now recalled) goods, so the step repeats the current holder
+        // rather than inventing one. An unknown holder — listener started
+        // mid-chain — is represented as such, same policy as a gap in the
+        // transfer chain.
+        recalled = true;
+        custodyChain.push({
+          holder: currentHolder ?? 'unknown',
+          kind: 'recalled',
+          timestamp: event.timestamp,
+          blockNumber: event.blockNumber,
+          transactionId: event.transactionId,
+        });
+        break;
+      case 'ComplianceBreach':
+        breaches.push({
+          consecutive: event.consecutive,
+          tempC: event.tempC,
+          rawDataHash: event.rawDataHash,
+          timestamp: event.timestamp,
+          blockNumber: event.blockNumber,
+          transactionId: event.transactionId,
+        });
+        break;
+      case 'RecallCascaded':
+        // Filed under the root batch only (the decoder maps `root` to
+        // batchId). Not a custody step: this row carries the blast radius,
+        // and — because Fabric drops events set under invokeChaincode — it is
+        // the only event the cascade produces at all (see RecallCascade doc).
+        recalled = true;
+        recallCascades.push({
+          recalled: event.recalled,
           timestamp: event.timestamp,
           blockNumber: event.blockNumber,
           transactionId: event.transactionId,
@@ -115,8 +215,12 @@ export const assembleHistory = (
     ...(producer !== undefined ? { producer } : {}),
     ...(registeredAt !== undefined ? { registeredAt } : {}),
     ...(currentHolder !== undefined ? { currentHolder } : {}),
+    delivered,
+    recalled,
     custodyChain,
     flags,
+    breaches,
+    recallCascades,
     events,
     eventCount: events.length,
   };

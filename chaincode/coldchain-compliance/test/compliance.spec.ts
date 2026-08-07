@@ -21,6 +21,12 @@ describe('temperature thresholds', () => {
   });
 });
 
+/** Deterministic valid 64-hex SHA-256-shaped fixture, distinct per seed. */
+const hex64 = (seed: number): string => seed.toString(16).padStart(64, '0');
+
+/** Fixed tx timestamp (unix seconds) served by the stubbed getTxTimestamp. */
+const TX_SECONDS = 1_750_000_000;
+
 interface InvokeCall {
   chaincode: string;
   args: string[];
@@ -45,6 +51,7 @@ const makeContext = (
     ` ${objectType} ${attributes.join(' ')} `;
 
   const stub = {
+    getTxTimestamp: () => ({ seconds: TX_SECONDS, nanos: 0 }),
     getState: async (k: string) => state.get(k) ?? Buffer.alloc(0),
     putState: async (k: string, v: Buffer) => {
       state.set(k, v);
@@ -143,10 +150,10 @@ describe('ComplianceContract', () => {
     const t = makeContext({ B1: { foodType: 'chilled', status: 'IN_TRANSIT' } });
 
     // Chilled range is 0..4; all of these sit comfortably inside it.
-    await cc.SubmitTemperatureReading(t.ctx, 'B1', '2', '1000', 'h1');
-    await cc.SubmitTemperatureReading(t.ctx, 'B1', '3', '1001', 'h2');
-    await cc.SubmitTemperatureReading(t.ctx, 'B1', '1', '1002', 'h3');
-    await cc.SubmitTemperatureReading(t.ctx, 'B1', '4', '1003', 'h4');
+    await cc.SubmitTemperatureReading(t.ctx, 'B1', '2', '1000', hex64(1));
+    await cc.SubmitTemperatureReading(t.ctx, 'B1', '3', '1001', hex64(2));
+    await cc.SubmitTemperatureReading(t.ctx, 'B1', '1', '1002', hex64(3));
+    await cc.SubmitTemperatureReading(t.ctx, 'B1', '4', '1003', hex64(4));
 
     const flags = t.invokes.filter((i) => i.args[0] === 'BatchRegistryContract:FlagBatch');
     expect(flags).to.have.length(0);
@@ -156,14 +163,14 @@ describe('ComplianceContract', () => {
   it('flags the batch through invokeChaincode once the breach count is reached', async () => {
     const t = makeContext({ B2: { foodType: 'chilled', status: 'IN_TRANSIT' } });
 
-    await cc.SubmitTemperatureReading(t.ctx, 'B2', '9', '1000', 'h1');
-    await cc.SubmitTemperatureReading(t.ctx, 'B2', '9.5', '1001', 'h2');
+    await cc.SubmitTemperatureReading(t.ctx, 'B2', '9', '1000', hex64(1));
+    await cc.SubmitTemperatureReading(t.ctx, 'B2', '9.5', '1001', hex64(2));
     expect(
       t.invokes.filter((i) => i.args[0] === 'BatchRegistryContract:FlagBatch'),
     ).to.have.length(0);
 
     // Third consecutive breach crosses VIOLATIONS_BEFORE_FLAG.
-    await cc.SubmitTemperatureReading(t.ctx, 'B2', '10', '1002', 'evidence-hash');
+    await cc.SubmitTemperatureReading(t.ctx, 'B2', '10', '1002', hex64(0xe));
 
     const flags = t.invokes.filter((i) => i.args[0] === 'BatchRegistryContract:FlagBatch');
     expect(flags).to.have.length(1);
@@ -171,21 +178,21 @@ describe('ComplianceContract', () => {
     expect(flags[0].channel).to.equal('mychannel');
     expect(flags[0].args[1]).to.equal('B2');
     expect(flags[0].args[2]).to.match(/cold chain breach/);
-    expect(flags[0].args[3]).to.equal('evidence-hash');
+    expect(flags[0].args[3]).to.equal(hex64(0xe));
   });
 
   it('resets the consecutive counter when a reading returns to range', async () => {
     const t = makeContext({ B3: { foodType: 'chilled', status: 'IN_TRANSIT' } });
 
-    await cc.SubmitTemperatureReading(t.ctx, 'B3', '9', '1000', 'h1');
-    await cc.SubmitTemperatureReading(t.ctx, 'B3', '9', '1001', 'h2');
+    await cc.SubmitTemperatureReading(t.ctx, 'B3', '9', '1000', hex64(1));
+    await cc.SubmitTemperatureReading(t.ctx, 'B3', '9', '1001', hex64(2));
     // Back inside range: the excursion is over.
-    await cc.SubmitTemperatureReading(t.ctx, 'B3', '2', '1002', 'h3');
+    await cc.SubmitTemperatureReading(t.ctx, 'B3', '2', '1002', hex64(3));
     expect(await cc.GetBreachCount(t.ctx, 'B3')).to.equal(0);
 
     // Two more breaches must not be enough, because the counter restarted.
-    await cc.SubmitTemperatureReading(t.ctx, 'B3', '9', '1003', 'h4');
-    await cc.SubmitTemperatureReading(t.ctx, 'B3', '9', '1004', 'h5');
+    await cc.SubmitTemperatureReading(t.ctx, 'B3', '9', '1003', hex64(4));
+    await cc.SubmitTemperatureReading(t.ctx, 'B3', '9', '1004', hex64(5));
 
     expect(
       t.invokes.filter((i) => i.args[0] === 'BatchRegistryContract:FlagBatch'),
@@ -196,7 +203,7 @@ describe('ComplianceContract', () => {
     const t = makeContext({ B4: { foodType: 'chilled', status: 'IN_TRANSIT' } });
     t.setCaller({ role: 'transporter' });
 
-    await expect(cc.SubmitTemperatureReading(t.ctx, 'B4', '9', '1000', 'h1')).to.be.rejectedWith(
+    await expect(cc.SubmitTemperatureReading(t.ctx, 'B4', '9', '1000', hex64(1))).to.be.rejectedWith(
       /only an identity enrolled with the oracle attribute/,
     );
   });
@@ -204,8 +211,80 @@ describe('ComplianceContract', () => {
   it('rejects a non-numeric temperature', async () => {
     const t = makeContext({ B5: { foodType: 'chilled', status: 'IN_TRANSIT' } });
     await expect(
-      cc.SubmitTemperatureReading(t.ctx, 'B5', 'very cold', '1000', 'h1'),
+      cc.SubmitTemperatureReading(t.ctx, 'B5', 'very cold', '1000', hex64(1)),
     ).to.be.rejectedWith(/is not a number/);
+  });
+
+  it('rejects a rawDataHash that is too short', async () => {
+    const t = makeContext({ B7: { foodType: 'chilled', status: 'IN_TRANSIT' } });
+    await expect(
+      cc.SubmitTemperatureReading(t.ctx, 'B7', '2', '1000', 'abc123'),
+    ).to.be.rejectedWith(/rawDataHash/);
+  });
+
+  it('rejects an uppercase rawDataHash', async () => {
+    const t = makeContext({ B7: { foodType: 'chilled', status: 'IN_TRANSIT' } });
+    await expect(
+      // Seed with hex letters so uppercasing actually changes the string.
+      cc.SubmitTemperatureReading(t.ctx, 'B7', '2', '1000', hex64(0xabcdef).toUpperCase()),
+    ).to.be.rejectedWith(/rawDataHash/);
+  });
+
+  it('rejects a rawDataHash containing non-hex characters', async () => {
+    const t = makeContext({ B7: { foodType: 'chilled', status: 'IN_TRANSIT' } });
+    // Right length, wrong alphabet: 'g' is outside [0-9a-f].
+    await expect(
+      cc.SubmitTemperatureReading(t.ctx, 'B7', '2', '1000', 'g'.repeat(64)),
+    ).to.be.rejectedWith(/rawDataHash/);
+  });
+
+  it('validates the hash only after identity and argument checks', async () => {
+    // Ordering matters for message stability: a non-oracle caller with a bad
+    // hash must still see the oracle rejection, not the hash one.
+    const t = makeContext({ B7: { foodType: 'chilled', status: 'IN_TRANSIT' } });
+    t.setCaller({ role: 'transporter' });
+    await expect(
+      cc.SubmitTemperatureReading(t.ctx, 'B7', '2', '1000', 'bad'),
+    ).to.be.rejectedWith(/oracle attribute/);
+  });
+
+  it('includes a tx timestamp in the ComplianceBreach event payload', async () => {
+    const t = makeContext({ B8: { foodType: 'chilled', status: 'IN_TRANSIT' } });
+
+    await cc.SubmitTemperatureReading(t.ctx, 'B8', '9', '1000', hex64(1));
+    await cc.SubmitTemperatureReading(t.ctx, 'B8', '9', '1001', hex64(2));
+    await cc.SubmitTemperatureReading(t.ctx, 'B8', '9', '1002', hex64(3));
+
+    const breaches = t.events.filter((e) => e.name === 'ComplianceBreach');
+    expect(breaches).to.have.length(1);
+    expect(breaches[0].payload).to.deep.equal({
+      batchId: 'B8',
+      consecutive: 3,
+      tempC: 9,
+      rawDataHash: hex64(3),
+      timestamp: TX_SECONDS,
+    });
+  });
+
+  it('includes a tx timestamp in the RecallCascaded event payload', async () => {
+    const t = makeContext(
+      {
+        ROOT: { foodType: 'chilled', status: 'FLAGGED' },
+        CHILD: { foodType: 'chilled', status: 'AT_WAREHOUSE' },
+      },
+      { ROOT: ['CHILD'] },
+    );
+
+    t.setCaller({ role: 'regulator' });
+    await cc.RecallBatch(t.ctx, 'ROOT');
+
+    const cascades = t.events.filter((e) => e.name === 'RecallCascaded');
+    expect(cascades).to.have.length(1);
+    expect(cascades[0].payload).to.deep.equal({
+      root: 'ROOT',
+      recalled: ['ROOT', 'CHILD'],
+      timestamp: TX_SECONDS,
+    });
   });
 
   it('cascades a recall to downstream batches', async () => {

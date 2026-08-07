@@ -10,13 +10,19 @@ import { ROLE_IDENTITIES, configFor } from '../src/client';
  * evidence that actually matters for them.
  */
 describe('handlerFor', () => {
-  it('has a handler for each of the three roles', () => {
-    expect(Object.keys(HANDLERS).sort()).to.deep.equal(['producer', 'regulator', 'transporter']);
+  it('has a handler for each of the four roles', () => {
+    expect(Object.keys(HANDLERS).sort()).to.deep.equal([
+      'producer',
+      'regulator',
+      'transporter',
+      'warehouse',
+    ]);
   });
 
   it('lists the alternatives when the role is unknown', () => {
-    expect(() => handlerFor('warehouse')).to.throw(/unknown role 'warehouse'/);
-    expect(() => handlerFor('warehouse')).to.throw(/producer/);
+    expect(() => handlerFor('auditor')).to.throw(/unknown role 'auditor'/);
+    expect(() => handlerFor('auditor')).to.throw(/producer/);
+    expect(() => handlerFor('auditor')).to.throw(/warehouse/);
   });
 });
 
@@ -41,6 +47,9 @@ describe('contextFor', () => {
       'transfer custody of this batch',
     );
     expect(contextFor(parseArgs(['regulator', 'recall']))).to.equal('recall this batch');
+    expect(contextFor(parseArgs(['warehouse', 'deliver']))).to.equal(
+      'mark this batch as delivered',
+    );
   });
 
   it('falls back to the raw role and command for anything unmapped', () => {
@@ -52,6 +61,7 @@ describe('configFor', () => {
   it('signs each role as its own enrolled identity', () => {
     expect(ROLE_IDENTITIES.producer).to.equal('producer1');
     expect(ROLE_IDENTITIES.transporter).to.equal('transporter1');
+    expect(ROLE_IDENTITIES.warehouse).to.equal('warehouse1');
     expect(ROLE_IDENTITIES.regulator).to.equal('regulator1');
   });
 

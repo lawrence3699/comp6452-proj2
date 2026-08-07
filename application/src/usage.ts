@@ -37,6 +37,13 @@ TRANSPORTER  (signs as transporter1, role=transporter)
       Deliberately attempt a producer-only transaction, to show it being
       refused. Expected to fail.
 
+WAREHOUSE  (signs as warehouse1, role=warehouse)
+  warehouse deliver --batch ID
+      Close out the custody chain: AT_WAREHOUSE -> DELIVERED. Only the current
+      holder may, and only from AT_WAREHOUSE.
+  warehouse show --batch ID
+      Read the current public record.
+
 REGULATOR  (signs as regulator1, role=regulator)
   regulator history --batch ID
       Full traceability read-back: every ledger version of the batch, the

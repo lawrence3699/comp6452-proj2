@@ -192,6 +192,42 @@ export class BatchRegistryContract extends Contract {
   }
 
   /**
+   * Close out the custody chain: the batch has reached its final recipient.
+   *
+   * Gated on possession, not on a role attribute, for the same reason
+   * TransferCustody is: the receiving organisation's identity may be a plain
+   * admin certificate with no role attribute at all (Org2's admin has none),
+   * and requiring one would strand batches at AT_WAREHOUSE forever. Holding
+   * the batch IS the authority to declare it delivered — nobody else can, and
+   * the state machine (only AT_WAREHOUSE -> DELIVERED is legal) stops a batch
+   * that is still moving from being closed early.
+   *
+   * The holder index is deliberately left alone: delivery ends the journey but
+   * not possession, so the delivering organisation keeps the batch in its
+   * GetBatchesByHolder view.
+   */
+  public async MarkDelivered(ctx: Context, batchId: string): Promise<void> {
+    const batch = await readBatch(ctx, batchId);
+    const caller = callerMsp(ctx);
+
+    if (batch.currentHolder !== caller) {
+      throw new Error(
+        `MarkDelivered: caller ${caller} is not the current holder ${batch.currentHolder}`,
+      );
+    }
+
+    assertTransition(batch.status, BatchStatus.Delivered);
+    await writeBatch(ctx, withStatus(batch, BatchStatus.Delivered));
+
+    ctx.stub.setEvent(
+      'BatchDelivered',
+      Buffer.from(
+        JSON.stringify({ batchId, holder: caller, timestamp: txTimeSeconds(ctx) }),
+      ),
+    );
+  }
+
+  /**
    * Mark a batch as a problem.
    *
    * Two callers are legitimate: a regulator acting directly, and the

@@ -19,6 +19,25 @@
  *      the checkpoint means the new stream picks up exactly where the old one
  *      stopped. Delivery is at-least-once, so the store dedupes on
  *      (block, tx, event); the pair is what makes it look exactly-once.
+ *
+ * CHECKPOINT FILE PRECEDENCE. The indexer runs one `listen()` per chaincode
+ * (batch-registry and coldchain-compliance), and two streams MUST NOT share a
+ * checkpoint file: each stream's progress through the chain is independent,
+ * and a shared file would let the faster stream's checkpoint skip the slower
+ * stream past events it has not yet indexed. So the default checkpoint path
+ * is derived per chaincode (`checkpoint-<chaincode>.json`). Precedence for
+ * the registry stream only, highest first:
+ *
+ *   1. `options.checkpointer`         — an explicit checkpointer wins always;
+ *   2. `INDEXER_CHECKPOINT_FILE`      — back-compat: existing deployments set
+ *                                       this expecting it to name the (then
+ *                                       only) registry stream's file, and a
+ *                                       redeploy must not orphan their state;
+ *   3. `.indexer/checkpoint-<chaincode>.json` under the working directory.
+ *
+ * Every non-registry stream ignores `INDEXER_CHECKPOINT_FILE` — honouring it
+ * there would recreate exactly the shared-file hazard the per-chaincode
+ * default exists to prevent.
  */
 
 import {
@@ -48,17 +67,30 @@ import type { RawChaincodeEvent } from './events';
 const _sdkEventIsRaw = (event: ChaincodeEvent): RawChaincodeEvent => event;
 void _sdkEventIsRaw;
 
-export const DEFAULT_CHECKPOINT_FILE = path.join(process.cwd(), '.indexer', 'checkpoint.json');
+/** Per-chaincode default path — see the header for why streams never share one. */
+export const defaultCheckpointFile = (chaincodeName: string): string =>
+  path.join(process.cwd(), '.indexer', `checkpoint-${chaincodeName}.json`);
 
-export const checkpointFile = (): string => {
+/**
+ * Resolve the checkpoint file for one chaincode's stream. `registryChaincode`
+ * identifies which stream `INDEXER_CHECKPOINT_FILE` is allowed to override —
+ * the env var predates the second stream and has always meant "the registry
+ * stream's file", so it must keep meaning exactly that.
+ */
+export const checkpointFile = (chaincodeName: string, registryChaincode: string): string => {
   const configured = process.env.INDEXER_CHECKPOINT_FILE;
-  return configured === undefined || configured === '' ? DEFAULT_CHECKPOINT_FILE : configured;
+  if (chaincodeName === registryChaincode && configured !== undefined && configured !== '') {
+    return configured;
+  }
+  return defaultCheckpointFile(chaincodeName);
 };
 
 export interface ListenOptions {
+  /** Chaincode to subscribe to. Defaults to `config.registryChaincode`. */
+  readonly chaincodeName?: string;
   /** Store to persist into. Defaults to the process-wide store. */
   readonly store?: EventStore;
-  /** Checkpointer. Defaults to a file checkpointer at `checkpointFile()`. */
+  /** Checkpointer. Defaults to a file checkpointer at `checkpointFile(...)`. */
   readonly checkpointer?: Checkpointer;
   /** First block to read when the checkpointer has no saved state. */
   readonly startBlock?: bigint;
@@ -168,7 +200,9 @@ const openEvents = async (
   });
 
 /**
- * Subscribe to `batch-registry` events and index them until cancelled.
+ * Subscribe to one chaincode's events and index them until cancelled.
+ * Defaults to `config.registryChaincode`; `run.ts` calls this twice, once per
+ * chaincode, over one shared store.
  *
  * Resolves with the tallies when `maxEvents` is reached or `signal` aborts;
  * otherwise it runs until the process is stopped, reconnecting through peer
@@ -176,10 +210,13 @@ const openEvents = async (
  */
 export const listen = async (options: ListenOptions = {}): Promise<ListenResult> => {
   const config = options.config ?? loadConfig();
+  const chaincodeName = options.chaincodeName ?? config.registryChaincode;
   const store = options.store ?? currentStore();
   await store.open();
 
-  const checkpointer = options.checkpointer ?? (await checkpointers.file(checkpointFile()));
+  const checkpointer =
+    options.checkpointer ??
+    (await checkpointers.file(checkpointFile(chaincodeName, config.registryChaincode)));
   const reconnectDelayMs = options.reconnectDelayMs ?? 3_000;
 
   const total: { indexed: number; duplicates: number; skipped: number } = {
@@ -209,13 +246,17 @@ export const listen = async (options: ListenOptions = {}): Promise<ListenResult>
       }
 
       let events: CloseableAsyncIterable<ChaincodeEvent> | undefined;
+      // An idle stream never reaches the loop's signal check: for-await parks
+      // on the peer until the next event arrives, which may be never. Closing
+      // the stream on abort is what makes Ctrl-C effective while idle — the
+      // iterator ends (or throws, caught below with isAborted() breaking out).
+      const closeOnAbort = (): void => events?.close();
+      options.signal?.addEventListener('abort', closeOnAbort, { once: true });
       try {
-        events = await openEvents(
-          network,
-          config.registryChaincode,
-          checkpointer,
-          options.startBlock,
-        );
+        events = await openEvents(network, chaincodeName, checkpointer, options.startBlock);
+        if (isAborted()) {
+          break;
+        }
         const result = await consumeEvents(events, store, checkpointer, {
           ...(remaining !== undefined ? { maxEvents: remaining } : {}),
           ...(options.signal !== undefined ? { signal: options.signal } : {}),
@@ -238,7 +279,9 @@ export const listen = async (options: ListenOptions = {}): Promise<ListenResult>
         await delay(reconnectDelayMs, options.signal);
       } finally {
         // Closing frees the gRPC stream; leaving it open through a reconnect
-        // loop leaks one stream per iteration.
+        // loop leaks one stream per iteration. The abort listener goes with it
+        // — a once-listener that already fired is a no-op to remove.
+        options.signal?.removeEventListener('abort', closeOnAbort);
         events?.close();
       }
     }
