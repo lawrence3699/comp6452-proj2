@@ -34,7 +34,12 @@ for org in 1 2; do
 done
 
 setGlobalsForOrg 1
-PACKAGE_ID=$(peer lifecycle chaincode queryinstalled | grep "${CC_LABEL}" | sed -n 's/^Package ID: \(.*\), Label:.*$/\1/p')
+# Match the label exactly and anchored: a substring match would also hit
+# labels this one is a prefix of (batch-registry_1 vs batch-registry_1.0), and
+# several matching lines would make PACKAGE_ID multi-line and break approve.
+# Take the last hit, which is the package just installed.
+PACKAGE_ID=$(peer lifecycle chaincode queryinstalled |
+  sed -n "s/^Package ID: \(.*\), Label: ${CC_LABEL}\$/\1/p" | tail -1)
 if [[ -z "${PACKAGE_ID}" ]]; then
   echo "could not find an installed package ID for label ${CC_LABEL}" >&2
   exit 1
